@@ -2,7 +2,7 @@
 
 > Spring 백엔드가 **1차 필터링(FATAL 레벨)** 한 로그를 받아, AI가 분석하여
 > 도메인·위험도·요약·분석·대응 방안·클러스터·이벤트ID를 돌려주는 API.
-> 시스템 전체 구성은 [ArchetectureGuide.md](ArchetectureGuide.md), 단계별 개발 계획은 [implementation_plan.md](implementation_plan.md) 참조.
+> 시스템 전체 구성은 [ArchitectureGuide.md](ArchitectureGuide.md), 단계별 개발 계획은 [implementation_plan.md](implementation_plan.md) 참조.
 
 ---
 
@@ -26,9 +26,9 @@
 
 | 결정 | 내용 | 비고 |
 |------|------|------|
-| **이상 여부 내부 판단** | 1차 필터(FATAL)만 거친 로그를 받으므로, 정상/이상 판정을 AI 파이프라인 안에서 직접 수행 | 외부 `label`에 의존하지 않음 |
+| **이상 여부 내부 판단** | 1차 필터(FATAL)만 거친 로그를 받으므로, 정상/이상 판정을 AI 파이프라인 안에서 직접 수행 | 결과는 응답 `status`(정상/이상). `정상`이면 `result`에 `summary`·`analysis`(정상 사유)만 채움 |
 | **ChromaDB 미사용** | 벡터 DB 검색(RAG) 대신, **내부 정의 문서를 그대로 참조**하여 Tool이 분류·정보를 전달 | 운영 의존성 축소 |
-| **Tool 4개 + 실행 순서** | 이벤트 템플릿 분류가 **선행**되어야 이상 여부·긴급도·클러스터 분류가 가능 (아래 4·5장) | Node 정보 조회는 독립 실행 |
+| **Tool 4개 + 실행 순서** | ①(템플릿)→②(이상 여부·긴급도) 후, **②가 이상이면** ③(클러스터)·④(Node 정보)를 수행 (아래 4·5장) | ②가 정상으로 판정하면 ③④ 생략하고 LLM 직행 |
 | **요청 필드 정리** | 요청에서 `label`·`eventId` 제거 (1차 필터 후 식별자/메타/내용만 전달) | 6장 스키마 반영 |
 | **응답에 `eventId` 포함** | 이벤트 템플릿 분류 결과를 응답으로 회신 | 6장 스키마 반영 |
 
@@ -41,29 +41,29 @@ flowchart TB
     REQ["요청 로그<br/>(FATAL · 1차 필터링됨)"]
 
     T1["① 이벤트 템플릿 분류<br/>→ eventId"]
-    T2["② 이상 여부 판단 + 긴급도 분류<br/>→ 이상 여부 / riskLevel"]
+    T2["② 이상 여부 판단 + 긴급도 분류<br/>→ status(정상/이상) / riskLevel"]
     T3["③ 클러스터(패턴) 분류<br/>→ clusterId"]
     T4["④ Node별 정보 조회·전달<br/>→ node 컨텍스트"]
 
-    LLM["LLM 분석<br/>→ domain / summary / analysis / action"]
-    MAP["응답 매핑<br/>→ 응답 스키마 (eventId 포함)"]
+    LLM["LLM 분석<br/>→ result"]
+    MAP["응답 매핑<br/>→ 응답 스키마"]
     RES(["응답"])
 
     REQ --> T1
-    REQ --> T4
     T1 --> T2
-    T1 --> T3
-    T2 --> LLM
+    T2 -->|정상| LLM
+    T2 -->|이상| T3
+    T2 -->|이상| T4
     T3 --> LLM
     T4 --> LLM
     LLM --> MAP --> RES
 ```
 
 1. 요청 로그를 **① 이벤트 템플릿 분류** Tool에 전달해 `eventId`를 확보한다. (선행 필수)
-2. 템플릿이 분류되면 **② 이상 여부 판단 + 긴급도 분류**, **③ 클러스터 분류**가 그 결과를 기반으로 수행된다.
-3. **④ Node별 정보 조회**는 ①에 의존하지 않고 독립적으로 컨텍스트를 확보한다.
-4. ②가 **이상**으로 판정하면 긴급도(`riskLevel`)와 함께, 4개 Tool 산출물·원본 로그를 LLM 분석에 합류시켜 도메인·요약·분석·대응 방안을 작성한다.
-5. 결과를 응답 스키마로 매핑하여 `eventId`를 포함해 반환한다.
+2. **② 이상 여부 판단 + 긴급도 분류**가 ① 결과를 기반으로 `status`(정상/이상)·`riskLevel`을 산출한다. **여기서 분기한다.**
+3. ②가 **`정상`**으로 판정하면 ③④를 건너뛰고 **바로 LLM 분석**으로 이어져 정상 사유(`summary`·`analysis`)만 작성한다.
+4. ②가 **`이상`**이면 **③(클러스터)·④(Node 정보 조회)** 를 수행한 뒤 LLM 분석에 합류하여 `result`의 모든 필드(도메인·위험도·요약·분석·대응·클러스터)를 채운다. (정상 경로는 `domain`·`action`=`""`, `riskLevel`·`clusterId`=`null`)
+5. 결과를 응답 스키마로 매핑하여 `eventId`·`status`(정상/이상)·`result`(정상·이상 모두 포함)를 반환한다.
 
 ---
 
@@ -75,11 +75,12 @@ flowchart TB
 | # | Tool | 역할 | 선행 의존 | 산출 → 응답 필드 |
 |---|------|------|-----------|------------------|
 | ① | **이벤트 템플릿 분류** | 로그를 사전 정의된 이벤트 템플릿에 매칭 (규칙 기반) | — (선행) | `eventId` |
-| ② | **이상 여부 판단 + 긴급도 분류** | 템플릿 기반으로 정상/이상 판정 및 위험도 산정 | ① 필요 | 이상 여부, `riskLevel` |
-| ③ | **클러스터(패턴) 분류** | 템플릿 기반으로 유사 로그 패턴(클러스터) 식별 | ① 필요 | `clusterId` |
-| ④ | **Node별 정보 조회·전달** | `node` 기준 부가 정보 조회 후 분석 컨텍스트로 제공 | 독립 | LLM 분석 컨텍스트 |
+| ② | **이상 여부 판단 + 긴급도 분류** | 템플릿 기반으로 정상/이상 판정 및 위험도 산정. **분기 기준** | ① 필요 | `status`(정상/이상), `riskLevel` |
+| ③ | **클러스터(패턴) 분류** | 템플릿 기반으로 유사 로그 패턴(클러스터) 식별 | ② (이상) | `clusterId` |
+| ④ | **Node별 정보 조회·전달** | `node` 기준 부가 정보 조회 후 분석 컨텍스트로 제공 | ② (이상) | LLM 분석 컨텍스트 |
 
-> **실행 순서:** ① → (② · ③) 는 템플릿 분류 결과에 의존하므로 ① 이후 수행한다. ④ 는 ①과 무관하게 병렬 실행 가능하다.
+> **실행 순서:** ① → ② 수행 후 ②의 판정으로 **분기**한다. **이상**이면 ③ · ④ 를 수행하고, **정상**이면 ③④를 건너뛴다.
+> **정상 분기:** ②가 **정상**으로 판정하면 ③④ 없이 바로 LLM 분석으로 이어진다(정상 사유만 작성).
 
 ---
 
@@ -111,16 +112,19 @@ flowchart TB
 | nodeRepeat | str | 노드 반복 정보 |
 | component | str | 컴포넌트 |
 | logType | str | 로그 타입 |
-| logTs | str | 로그 타임스탬프 |
+| logTs | str | 로그 타임스탬프 (`yyyy-MM-dd HH:mm:ss` 형식 문자열) |
 | logLevel | str | 로그 레벨 |
 | content | str | 로그 내용 |
 
 #### Response
 
+`result`는 정상·이상 모두 포함된다. **`정상`이면** `summary`·`analysis`에 정상 사유만 담기고, `domain`·`action`은 `""`, `riskLevel`·`clusterId`는 `null`이다. 아래 예시는 `이상`인 경우다.
+
 ```json
 {
   "logId": 0,
   "eventId": "string",
+  "status": "정상 | 이상",
   "result": {
     "domain": "string",
     "riskLevel": "string",
@@ -128,7 +132,7 @@ flowchart TB
     "analysis": "string",
     "action": "string",
     "clusterId": 0,
-    "analyzedAt": "timestamp"
+    "analyzedAt": "yyyy-MM-dd HH:mm:ss"
   },
   "processingTimeMs": 0
 }
@@ -138,13 +142,15 @@ flowchart TB
 |------|------|------|------|
 | logId | int | 분석 대상 로그 식별자 | (요청 echo) |
 | eventId | str | 이벤트 식별자 | Tool ① |
-| result.domain | str | 도메인 | LLM 분석 |
-| result.riskLevel | str | 위험도 (`긴급` / `높음` / `보통` / `낮음`) | Tool ② |
-| result.summary | str | 요약 | LLM 분석 |
-| result.analysis | str | 분석 내용 | LLM 분석 |
-| result.action | str | 대응 방안 | LLM 분석 |
-| result.clusterId | int | 클러스터 식별자 | Tool ③ |
-| result.analyzedAt | timestamp | 분석 시각 | 응답 매핑 |
+| status | str | 로그 판정 (`정상` / `이상`) | Tool ② |
+| result | object | 분석 결과 (정상·이상 모두 포함) | 결과 매핑 |
+| result.domain | str | 도메인 (`정상`이면 `""`) | LLM 분석 |
+| result.riskLevel | str \| null | 위험도 (`긴급`/`높음`/`보통`/`낮음`). `정상`이면 `null` | Tool ② |
+| result.summary | str | 요약 — `정상`이면 정상 사유 | LLM 분석 |
+| result.analysis | str | 분석 내용 — `정상`이면 정상 사유 | LLM 분석 |
+| result.action | str | 대응 방안 (`정상`이면 `""`) | LLM 분석 |
+| result.clusterId | int \| null | 클러스터 식별자 (`정상`이면 `null`) | Tool ③ |
+| result.analyzedAt | str | 분석/판정 시각 (`yyyy-MM-dd HH:mm:ss` 문자열) | 응답 매핑 |
 | processingTimeMs | int | 처리 소요 시간 (ms) | 응답 매핑 |
 
 ---
@@ -152,6 +158,9 @@ flowchart TB
 ### 5.2 POST `/ai/v1/analyze/batch` — 로그 다건 분석
 
 스케줄러 기본 경로로, 여러 로그를 한 번에 분석한다. 개별 로그 실패가 전체 배치를 막지 않는다.
+
+각 항목은 두 개념을 구분한다 — **`processStatus`**(처리 완료 여부, `success`/`fail`)와 **`status`**(로그 판정, `정상`/`이상`).
+처리 실패면 `error`만 채운다. 성공이면 `status`와 `result`를 모두 채우되, `정상`이면 `result`의 `summary`·`analysis`(정상 사유)만 채워지고 나머지는 빈값이다.
 
 #### Request
 
@@ -186,20 +195,22 @@ flowchart TB
     {
       "logId": 0,
       "eventId": "string",
-      "status": "string",
+      "processStatus": "success",
+      "status": "정상 | 이상",
       "result": {
         "domain": "string",
         "riskLevel": "string",
         "summary": "string",
         "analysis": "string",
         "action": "string",
-        "clusterId": 0
+        "clusterId": 0,
+        "analyzedAt": "yyyy-MM-dd HH:mm:ss"
       }
     },
     {
       "logId": 0,
-      "eventId": "string",
-      "status": "string",
+      "eventId": null,
+      "processStatus": "fail",
       "error": "string"
     }
   ]
@@ -212,10 +223,11 @@ flowchart TB
 | processingTimeMs | int | 전체 처리 소요 시간 (ms) |
 | results | array | 로그별 분석 결과 배열 |
 | results[].logId | int | 로그 식별자 |
-| results[].eventId | str | 이벤트 식별자 |
-| results[].status | str | 처리 상태 (성공 / 실패) |
-| results[].result | object | 성공 시 분석 결과 (domain, riskLevel, summary, analysis, action, clusterId) |
-| results[].error | str | 실패 시 오류 메시지 |
+| results[].eventId | str \| null | 이벤트 식별자 (처리 실패 시 null) |
+| results[].processStatus | str | 처리 완료 여부 (`success` / `fail`) |
+| results[].status | str \| null | 로그 판정 (`정상` / `이상`). 처리 실패 시 null |
+| results[].result | object \| null | 성공 시 분석 결과(domain, riskLevel, summary, analysis, action, clusterId, analyzedAt). `정상`이면 일부 필드만 채워짐(summary·analysis). 처리 실패 시 null |
+| results[].error | str | 처리 실패 시 오류 메시지 |
 
 ---
 

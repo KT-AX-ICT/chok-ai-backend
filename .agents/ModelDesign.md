@@ -36,19 +36,22 @@ class CamelModel(BaseModel):
 
 값 집합이 고정된 문자열 필드는 좁은 타입으로 정의해 검증·OpenAPI 문서화를 강화한다.
 
-- **`RiskLevel`은 `Literal` 타입 별칭으로 둔다.** 응답 문자열이 곧 한글 값이고 영문 멤버명↔한글 값 매핑이 불필요하므로, Enum 클래스를 만들지 않는다.
-- **`BatchItemStatus`는 Enum으로 둔다.** 멤버명이 값과 1:1이라 군더더기가 없고, 배치 매핑·검증 로직에서 멤버를 참조한다.
+- **`RiskLevel`·`LogStatus`는 `Literal` 타입 별칭으로 둔다.** 응답 문자열이 곧 한글 값이라 Enum 클래스가 불필요하다.
+- **`ProcessStatus`는 Enum으로 둔다.** 멤버명이 값과 1:1이고, 배치 매핑·검증 로직에서 멤버를 참조한다.
 
 ```python
 # models/enums.py
 from enum import Enum
 from typing import Literal
 
-# 응답 문자열 그대로. Tool ②가 이 중 하나를 산출.
+# Tool ②가 산출. 응답 result.riskLevel 값.
 RiskLevel = Literal["긴급", "높음", "보통", "낮음"]
 
+# Tool ②가 산출. 로그 판정(정상/이상). 응답 status 값.
+LogStatus = Literal["정상", "이상"]
 
-class BatchItemStatus(str, Enum):
+
+class ProcessStatus(str, Enum):   # 배치 항목의 "처리 완료 여부" (정상/이상 판정과 별개)
     SUCCESS = "success"
     FAIL = "fail"
 ```
@@ -56,12 +59,13 @@ class BatchItemStatus(str, Enum):
 | 타입 | 값(응답 문자열) | 산출 |
 |------|-----|------|
 | `RiskLevel` | `긴급` / `높음` / `보통` / `낮음` | Tool ② |
-| `BatchItemStatus` | `success` / `fail` | 배치 처리 결과 |
+| `LogStatus` | `정상` / `이상` | Tool ② --> spring 저장 내용 확인 필요|
+| `ProcessStatus` | `success` / `fail` | 배치 처리 완료 여부 |
 
-> `RiskLevel`은 **Tool ②가 산출**하여 응답 `result.riskLevel`을 만들 때 쓰이고, 동시에 LLM 프롬프트 컨텍스트로도 주입된다. 값이 곧 클라이언트가 받는 문자열이라 **한글**로 고정한다.
-> 검증조차 불필요하면 plain `str`로 둬도 된다(통과형 선호 시) — 다만 그 경우 허용 값은 [API.md](API.md) 문서로만 보장된다.
+> `RiskLevel`·`LogStatus`는 **Tool ②가 산출**하여 응답(`result.riskLevel`, `status`)을 만들고 LLM 컨텍스트로도 주입된다. 값이 곧 클라이언트가 받는 문자열이라 **한글**로 고정한다.
+> `ProcessStatus`(success/fail)는 "로그 판정(정상/이상)"과 **다른 개념** — 배치 항목의 처리 성공/실패를 가리킨다(2-5).
 
-> `logLevel`·`logType`·`domain`은 현재 자유 문자열로 둔다. 값 집합이 확정되면 동일 방식으로 Enum화한다(3장 확장 포인트).
+> `logLevel`·`logType`·`domain`은 현재 자유 문자열로 둔다. 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다(4장 확장 포인트).
 
 ---
 
@@ -89,7 +93,7 @@ class LogAnalyzeRequest(CamelModel):
     node_repeat: str
     component: str
     log_type: str
-    log_ts: str        # 원문 문자열 그대로 — datetime 파싱하지 않음
+    log_ts: str        # "yyyy-MM-dd HH:mm:ss" 문자열 — datetime 파싱하지 않음
     log_level: str
     content: str
 ```
@@ -101,49 +105,62 @@ class LogAnalyzeRequest(CamelModel):
 | node_repeat | nodeRepeat | str | ✔ | 노드 반복 정보 |
 | component | component | str | ✔ | 컴포넌트 |
 | log_type | logType | str | ✔ | 로그 타입 |
-| log_ts | logTs | str | ✔ | 로그 타임스탬프(원문 문자열 그대로 수신) |
+| log_ts | logTs | str | ✔ | 로그 타임스탬프 — `yyyy-MM-dd HH:mm:ss` 형식 문자열 (파싱 없이 그대로 수신) |
 | log_level | logLevel | str | ✔ | 로그 레벨 |
 | content | content | str | ✔ | 로그 내용 |
 
-### 2-2. 분석 결과 본문 — `AnalysisResultBase` / `LogAnalyzeResult`
+### 2-2. 분석 결과 본문 — `AnalysisResult`
 
-단건·다건이 결과 본문을 공유하되, **`analyzedAt`은 단건에만** 존재한다([API.md](API.md) 계약 차이). 공통 필드를 베이스로 분리한다.
+단건·배치가 **동일한 결과 본문**을 공유하며, **정상·이상 모두 `result`를 채운다.**
+정상이면 `summary`·`analysis`에 **정상 사유**만 담고, 나머지는 빈값으로 둔다 — 문자열 필드(`domain`·`action`)는 `""`, 타입 필드(`riskLevel`·`clusterId`)는 `null`. `analyzedAt`은 공통.
 
 ```python
 from datetime import datetime
+from pydantic import Field, field_serializer
 from .enums import RiskLevel
 
-
-class AnalysisResultBase(CamelModel):
-    domain: str
-    risk_level: RiskLevel
-    summary: str
-    analysis: str
-    action: str
-    cluster_id: int = Field(ge=0)
+_TS_FMT = "%Y-%m-%d %H:%M:%S"
 
 
-class LogAnalyzeResult(AnalysisResultBase):
-    analyzed_at: datetime          # 직렬화 시 ISO 8601
+class AnalysisResult(CamelModel):
+    domain: str                                    # 이상: 도메인 / 정상: "" (빈 문자열)
+    risk_level: RiskLevel | None = None            # 이상: 위험도 / 정상: null (Literal이라 "" 불가)
+    summary: str                                   # 공통 — 정상이면 정상 사유
+    analysis: str                                  # 공통 — 정상이면 정상 사유
+    action: str                                    # 이상: 대응 방안 / 정상: "" (빈 문자열)
+    cluster_id: int | None = Field(default=None, ge=0)  # 이상: 클러스터 / 정상: null
+    analyzed_at: datetime                          # 공통, 판정/분석 시각
+
+    @field_serializer("analyzed_at")
+    def _fmt_analyzed_at(self, v: datetime) -> str:
+        return v.strftime(_TS_FMT)   # "yyyy-MM-dd HH:mm:ss"
 ```
 
-| 속성 | 별칭 | 타입 | 단건 | 다건 | 산출 |
-|------|------|------|:---:|:---:|------|
-| domain | domain | str | ✔ | ✔ | LLM 분석 |
-| risk_level | riskLevel | `RiskLevel` | ✔ | ✔ | Tool ② |
-| summary | summary | str | ✔ | ✔ | LLM 분석 |
-| analysis | analysis | str | ✔ | ✔ | LLM 분석 |
-| action | action | str | ✔ | ✔ | LLM 분석 |
-| cluster_id | clusterId | int | ✔ | ✔ | Tool ③ (`ge=0`) |
-| analyzed_at | analyzedAt | datetime | ✔ | ✗ | 결과 매핑 (단건 전용) |
+| 속성 | 별칭 | 타입 | 이상 | 정상 | 산출 |
+|------|------|------|------|------|------|
+| domain | domain | str | 도메인 | `""` | LLM 분석 |
+| risk_level | riskLevel | `RiskLevel` \| None | 위험도 | `null` | Tool ② |
+| summary | summary | str | 분석 요약 | 정상 사유 | LLM 분석 |
+| analysis | analysis | str | 분석 내용 | 정상 사유 | LLM 분석 |
+| action | action | str | 대응 방안 | `""` | LLM 분석 |
+| cluster_id | clusterId | int \| None | 클러스터 식별자 | `null` | Tool ③ |
+| analyzed_at | analyzedAt | datetime | 분석 시각 | 판정 시각 | 결과 매핑 (`yyyy-MM-dd HH:mm:ss` 직렬화) |
 
 ### 2-3. 단건 응답 — `LogAnalyzeResponse`
 
+단건은 처리 실패 시 부분 응답이 아니라 **에러 응답**(§3)으로 떨어지므로, 성공 응답에는 `status`·`result`가 항상 있다.
+`status`(정상/이상)에 따라 `result` 내부 필드 구성만 달라진다(2-2).
+
 ```python
+from pydantic import Field
+from .enums import LogStatus
+
+
 class LogAnalyzeResponse(CamelModel):
     log_id: int
     event_id: str
-    result: LogAnalyzeResult
+    status: LogStatus           # 정상 / 이상 (Tool ②)
+    result: AnalysisResult      # 항상 포함 (정상이면 일부 필드 빈값 — 2-2)
     processing_time_ms: int = Field(ge=0)
 ```
 
@@ -151,7 +168,8 @@ class LogAnalyzeResponse(CamelModel):
 |------|------|------|:---:|------|
 | log_id | logId | int | ✔ | 요청 echo |
 | event_id | eventId | str | ✔ | Tool ① |
-| result | result | `LogAnalyzeResult` | ✔ | 결과 매핑 |
+| status | status | `LogStatus` | ✔ | Tool ② (정상/이상) |
+| result | result | `AnalysisResult` | ✔ | 결과 매핑 (정상이면 일부 필드 빈값) |
 | processing_time_ms | processingTimeMs | int | ✔ | 측정 (`ge=0`) |
 
 ### 2-4. 다건 요청 — `LogBatchAnalyzeRequest`
@@ -167,26 +185,33 @@ class LogBatchAnalyzeRequest(CamelModel):
 
 ### 2-5. 다건 응답 — `LogBatchResultItem` / `LogBatchAnalyzeResponse`
 
-항목은 `status`에 따라 `result`(성공) **또는** `error`(실패) 중 하나만 채운다. 둘의 **상호 배타성**을 검증한다.
+항목은 **두 개념을 구분**한다 — `processStatus`(처리 완료 여부, success/fail)와 `status`(로그 판정, 정상/이상).
+- `processStatus="fail"` → `error`만 채우고 `status`·`result`는 null.
+- `processStatus="success"` → `status`(정상/이상)와 `result`를 **모두 채운다.** 정상이면 `result`의 일부 필드만 채워진다(2-2).
 
 ```python
-from pydantic import model_validator
-from .enums import BatchItemStatus
+from pydantic import Field, model_validator
+from .enums import ProcessStatus, LogStatus
 
 
 class LogBatchResultItem(CamelModel):
     log_id: int
-    event_id: str | None = None        # 템플릿 분류 전 실패 시 None 허용
-    status: BatchItemStatus
-    result: AnalysisResultBase | None = None   # analyzedAt 없음 (계약상 다건 본문)
-    error: str | None = None
+    event_id: str | None = None            # 처리 실패(템플릿 분류 전) 시 null
+    process_status: ProcessStatus          # 처리 완료 여부 (success/fail)
+    status: LogStatus | None = None        # 로그 판정 (정상/이상). 처리 실패 시 null
+    result: AnalysisResult | None = None    # 성공 시 채움(정상이면 일부 필드만). 처리 실패 시 null
+    error: str | None = None                # 처리 실패 시 사유
 
     @model_validator(mode="after")
-    def _check_exclusive(self):
-        if self.status is BatchItemStatus.SUCCESS and self.result is None:
-            raise ValueError("success 항목은 result가 필요합니다")
-        if self.status is BatchItemStatus.FAIL and self.error is None:
-            raise ValueError("fail 항목은 error가 필요합니다")
+    def _check(self):
+        if self.process_status is ProcessStatus.FAIL:
+            if self.error is None:
+                raise ValueError("fail 항목은 error가 필요합니다")
+        else:  # success
+            if self.status is None:
+                raise ValueError("success 항목은 status(정상/이상)가 필요합니다")
+            if self.result is None:
+                raise ValueError("success 항목은 result가 필요합니다")
         return self
 
 
@@ -199,9 +224,10 @@ class LogBatchAnalyzeResponse(CamelModel):
 | 모델 | 속성 | 별칭 | 타입 | 필수 | 설명 |
 |------|------|------|------|:---:|------|
 | `LogBatchResultItem` | log_id | logId | int | ✔ | 로그 식별자 |
-| | event_id | eventId | str \| None | ✔* | Tool ① 산출. 분류 전 실패 시 null |
-| | status | status | `BatchItemStatus` | ✔ | success / fail |
-| | result | result | `AnalysisResultBase` \| None | 성공 시 | 성공 항목 본문 (analyzedAt 제외) |
+| | event_id | eventId | str \| None | | Tool ① 산출. 처리 실패 시 null |
+| | process_status | processStatus | `ProcessStatus` | ✔ | 처리 완료 여부 (success/fail) |
+| | status | status | `LogStatus` \| None | 성공 시 | 로그 판정 (정상/이상). 실패 시 null |
+| | result | result | `AnalysisResult` \| None | 성공 시 | 본문(정상이면 일부 필드만). 처리 실패 시 null |
 | | error | error | str \| None | 실패 시 | 실패 사유 메시지 |
 | `LogBatchAnalyzeResponse` | total_count | totalCount | int | ✔ | 처리 총 개수 (`ge=0`) |
 | | processing_time_ms | processingTimeMs | int | ✔ | 전체 소요(ms, `ge=0`) |
@@ -240,7 +266,8 @@ class LLMAnalysis(BaseModel):
     reason: str        # 사람이 읽을 근거 (시스템 프롬프트상 필수). 응답 미노출 — 로깅/검증용
 ```
 
-> `with_structured_output(LLMAnalysis)`로 수신한다. **결과 매핑 단계**에서 `LLMAnalysis` + `risk_level` + `cluster_id` + `analyzed_at`을 합쳐 `LogAnalyzeResult`(단건) 또는 `AnalysisResultBase`(다건)로 변환한다. `reason`은 응답에 싣지 않는다.
+> `with_structured_output(LLMAnalysis)`로 수신한다. **결과 매핑 단계**에서 `LLMAnalysis` + `risk_level` + `cluster_id` + `analyzed_at`을 합쳐 `AnalysisResult`(단건·배치 공통)로 변환한다. `reason`은 응답에 싣지 않는다.
+> 단, **`status="정상"`이면 전체 분석 대신 정상 사유만** 생성하여 `summary`·`analysis`에 담고, `domain`·`action`은 `""`, `riskLevel`·`clusterId`는 `null`로 둔다(2-2). `result` 자체는 정상·이상 모두 채워진다.
 
 ---
 
@@ -289,7 +316,7 @@ class LLMError(AppError):          # 호출 실패 + 구조화 출력 파싱 실
 ### 3-3. 배치의 부분 실패
 
 - 배치 요청에서 **개별 로그 실패는 전체 실패가 아니다.** `asyncio.gather(..., return_exceptions=True)`로 수집한 뒤,
-  성공 → `status="success"` + `result`, 실패 → `status="fail"` + `error`(예외 `message`)로 항목별 매핑한다.
+  성공 → `processStatus="success"` + `status`(정상/이상) + `result`(정상이면 일부 필드만), 실패 → `processStatus="fail"` + `error`(예외 `message`)로 항목별 매핑한다.
 - 따라서 개별 실패는 `ErrorResponse`(공통 에러)가 아니라 `LogBatchResultItem.error`로 표현된다([API.md 5.2](API.md)).
 - 요청 자체가 깨진 경우(스키마 검증 실패 등)에만 전체 요청이 `ErrorResponse`로 떨어진다.
 
@@ -297,7 +324,7 @@ class LLMError(AppError):          # 호출 실패 + 구조화 출력 파싱 실
 
 ## 4. 확장 포인트
 
-- **Enum 확장:** `logLevel`·`logType`·`domain` 값 집합이 확정되면 `RiskLevel`과 동일하게 Enum화한다.
+- **고정 값 타입 확장:** `logLevel`·`logType`·`domain` 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다.
 - **clusterId 미할당:** 클러스터가 없을 때의 표현(`null` 허용 vs `-1`/`0` 센티넬)을 Tool ③ 정책 확정 후 결정한다.
 - **에러 코드 카탈로그:** 현재 표는 시작점이다. 이벤트 템플릿 매칭 실패, 내부 정의 문서 로드 실패(`CONFIG_ERROR` 등) 등 도메인 오류가 정해지면 코드·상태를 추가한다.
 - **logTs 타입:** 현재 원문 문자열 수신. 포맷이 표준화되면 `datetime` 파싱으로 승격을 검토한다.

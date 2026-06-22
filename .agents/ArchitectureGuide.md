@@ -19,7 +19,7 @@ flowchart TB
     SKIP["FATAL 이외 로그<br/>LLM 분석 생략"]
 
     subgraph AI["AI Agent 분석 워크플로우"]
-        AGENT["이상 로그 분석 및 대응 제안 작성<br/>LLM Agent"]
+        AGENT["로그 분석 및 대응 제안 작성<br/>LLM Agent"]
         RESULT["결과 반환<br/>JSON 변환 → 응답 전송"]
         subgraph TOOLS["Agent가 사용하는 Tool"]
             direction LR
@@ -27,10 +27,13 @@ flowchart TB
             T2["Tool ②<br/>이상 여부 + 긴급도 분류<br/>이벤트 템플릿 기반 판정"]
             T3["Tool ③<br/>클러스터 분류<br/>이벤트 템플릿 기반 판정"]
             T4["Tool ④<br/>Node 정보 조회<br/>데이터 분석 결과 기반 검색"]
-            T1 --> T2 --> T3 --> T4
+            T1 --> T2
+            T2 --> T3
+            T2 --> T4
         end
         AGENT --> TOOLS
         TOOLS --> AGENT
+        T2 -. 정상 → 분석 직행 .-> AGENT
         AGENT --> RESULT
     end
 
@@ -55,7 +58,7 @@ flowchart TB
 | 색상 | 분류 | 해당 노드 |
 |------|------|-----------|
 | 🟦 파랑 | Tool | 1차 이상 탐지(필터링), Tool ①~④ |
-| 🟪 보라 | LLM Agent | 이상 로그 분석 및 대응 제안 작성 |
+| 🟪 보라 | LLM Agent | 로그 분석 및 대응 제안 작성 |
 | 🟩 초록 | 게이트웨이 | FastAPI Gateway, 결과 반환 |
 | ⬜ 회색 | 데이터/보조 | 원본 로그, 분석 생략, 응답 출력 |
 
@@ -63,9 +66,9 @@ flowchart TB
 
 1. **원본 로그**를 Spring Boot에서 파싱한 뒤, **1차 이상 탐지**(레벨 기반 필터링)를 수행한다.
 2. **FATAL 이외 로그**는 LLM 분석을 생략한다(점선 경로).
-3. **FATAL 로그**만 FastAPI Gateway로 분석 요청을 전달한다. (정상/이상 최종 판정은 AI 내부 Tool ②가 수행)
+3. **FATAL 로그**만 FastAPI Gateway로 분석 요청을 전달한다. (정상/이상 판정은 AI 내부 **Tool ②**가 수행)
 4. Gateway가 **LLM Agent**로 라우팅하고, Agent는 4개 Tool을 사용한다.
-   - **Tool ① 이벤트 템플릿 분류**가 선행되어야 **② 이상 여부 + 긴급도 분류**, **③ 클러스터 분류**가 그 결과를 기반으로 수행된다.
-   - **Tool ④ Node 정보 조회**는 ①과 무관하게 독립 수행할 수 있다.
+   - **① 이벤트 템플릿 분류 → ② 이상 여부 + 긴급도 분류** 순으로 수행하고, **②가 이상으로 판정하면 ③ 클러스터 분류·④ Node 정보 조회**를 이어서 수행한다.
+   - **②가 정상으로 판정하면 ③④를 건너뛰고 바로 LLM 분석으로 직행**한다(점선 경로 — 정상 사유만 작성).
    - 모든 Tool은 ChromaDB 대신 **내부 정의 문서를 직접 참조**한다.
 5. Agent가 분석·대응 방안을 작성하면 **결과 반환** 단계에서 JSON으로 변환해 응답을 전송한다.
