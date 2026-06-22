@@ -1,0 +1,133 @@
+[
+  {
+    "id": 0,
+    "cluster_title": "메모리/인터럽트군",
+    "description": "메모리·스토리지 인터럽트 계열 오류로, 하드웨어(메모리/스토리지) 고장 전조 신호. 주요 발생 Label은 KERNDTLB(데이터 TLB 오류) 외 KERNSTOR(데이터 스토리지 인터럽트).",
+    "event_template": [
+      {
+        "event_id": "E52",
+        "template": "data storage interrupt"
+      },
+      {
+        "event_id": "E55",
+        "template": "data TLB error interrupt"
+      }
+    ],
+    "importance": "High"
+  },
+  {
+    "id": 3,
+    "cluster_title": "커널 종료/패닉군",
+    "description": "커널이 종료(terminated)되거나 패닉(panic)으로 실행이 중단되는 노드 다운 수준의 치명 장애. 주요 발생 Label은 KERNTERM(커널 종료).",
+    "event_template": [
+      {
+        "event_id": "E111",
+        "template": "rts: kernel terminated for reason <*>"
+      },
+      {
+        "event_id": "E112",
+        "template": "rts: kernel terminated for reason <*>: bad message header: invalid cpu, type=<*>, cpu=<*>, index=<*>, total=<*>"
+      }
+    ],
+    "importance": "High"
+  },
+  {
+    "id": 2,
+    "cluster_title": "ciod 통신/로딩 오류군",
+    "description": "ciod 제어 스트림의 메시지 전송·로딩 실패로, 앱과 커널 간 통신 오류. 주요 발생 Label은 APPSEV(앱 심각 오류(링크 단절)) 외 APPREAD(메시지 읽기 실패), APPRES(연결 리셋), APPTO(연결 타임아웃).",
+    "event_template": [
+      {
+        "event_id": "E29",
+        "template": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to <*>:<*>: Link has been severed"
+      },
+      {
+        "event_id": "E30",
+        "template": "ciod: Error reading message prefix on CioStream socket to <*>:<*>, Connection reset by peer"
+      },
+      {
+        "event_id": "E31",
+        "template": "ciod: Error reading message prefix on CioStream socket to <*>:<*>, Connection timed out"
+      },
+      {
+        "event_id": "E32",
+        "template": "ciod: Error reading message prefix on CioStream socket to <*>:<*>, Link has been severed"
+      },
+      {
+        "event_id": "E33",
+        "template": "ciod: failed to read message prefix on control stream (CioStream socket to <*>:<*>"
+      }
+    ],
+    "importance": "Middle"
+  },
+  {
+    "id": 1,
+    "cluster_title": "마운트/파일시스템 실패군",
+    "description": "Lustre 파일시스템 마운트 실패로, 스토리지 I/O 접근 장애. 주요 발생 Label은 KERNMNTF(마운트 실패).",
+    "event_template": [
+      {
+        "event_id": "E80",
+        "template": "Lustre mount FAILED : bglio<*> : block_id : location"
+      },
+      {
+        "event_id": "E81",
+        "template": "Lustre mount FAILED : bglio<*> : point <*>"
+      }
+    ],
+    "importance": "Middle"
+  },
+  {
+    "id": 4,
+    "cluster_title": "커널 종료/패닉군",
+    "description": "커널이 종료(terminated)되거나 패닉(panic)으로 실행이 중단되는 노드 다운 수준의 치명 장애. 주요 발생 Label은 KERNRTSP(rts 패닉/정지). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
+    "event_template": [
+      {
+        "event_id": "E108",
+        "template": "rts panic! - stopping execution"
+      }
+    ],
+    "importance": "Middle"
+  },
+  {
+    "id": 5,
+    "cluster_title": "네트워크/트리 오류군",
+    "description": "트리 네트워크 패킷 수신 오류로, 노드 간 통신 이상. 주요 발생 Label은 KERNREC(패킷 수신 오류). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
+    "event_template": [
+      {
+        "event_id": "E60",
+        "template": "Error receiving packet on tree network, expecting type <*> instead of type <*> (softheader=<*> <*> <*> <*>) PSR0=<*> PSR1=<*> PRXF=<*> PIXF=<*>"
+      }
+    ],
+    "importance": "Low"
+  },
+  {
+    "id": 6,
+    "cluster_title": "ciod 통신/로딩 오류군",
+    "description": "ciod 제어 스트림의 메시지 전송·로딩 실패로, 앱과 커널 간 통신 오류. 주요 발생 Label은 APPCHILD(자식 프로세스 없음). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
+    "event_template": [
+      {
+        "event_id": "E23",
+        "template": "ciod: Error creating node map from file <*>: No child processes"
+      }
+    ],
+    "importance": "Low"
+  },
+  {
+    "id": 7,
+    "cluster_title": "ciod 통신/로딩 오류군",
+    "description": "ciod 제어 스트림의 메시지 전송·로딩 실패로, 앱과 커널 간 통신 오류. 주요 발생 Label은 APPOUT(입출력 오류). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
+    "event_template": [
+      {
+        "event_id": "E36",
+        "template": "ciod: LOGIN chdir(<*>) failed: Input/output error"
+      }
+    ],
+    "importance": "Low"
+  },
+  {
+    "id": 99,
+    "cluster_title": "미분류 (관리자 검토 필요)",
+    "description": "사전 정의된 클러스터(0~7) 중 어디에도 매핑되지 않는 event_id가 배정되는 기타 버킷. 신규·희소 로그 유형이거나 unknown(템플릿 미매칭)일 수 있어 관리자 검토가 필요하다. 누적 빈도가 높아지면 정식 클러스터 신설 또는 메타데이터 갱신을 검토한다. 장애 심각도는 미상이므로 검토 전까지 단정하지 않는다.",
+    "event_template": [],
+    "importance": "Low"
+  }
+]
