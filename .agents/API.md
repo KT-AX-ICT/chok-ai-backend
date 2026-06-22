@@ -139,7 +139,7 @@ flowchart TB
 | logId | int | 분석 대상 로그 식별자 | (요청 echo) |
 | eventId | str | 이벤트 식별자 | Tool ① |
 | result.domain | str | 도메인 | LLM 분석 |
-| result.riskLevel | str | 위험도 | Tool ② |
+| result.riskLevel | str | 위험도 (`긴급` / `높음` / `보통` / `낮음`) | Tool ② |
 | result.summary | str | 요약 | LLM 분석 |
 | result.analysis | str | 분석 내용 | LLM 분석 |
 | result.action | str | 대응 방안 | LLM 분석 |

@@ -42,10 +42,11 @@ from enum import Enum
 
 
 class RiskLevel(str, Enum):
-    CRITICAL = "CRITICAL"
-    HIGH = "HIGH"
-    MEDIUM = "MEDIUM"
-    LOW = "LOW"
+    # 멤버 이름은 ASCII로 두고, 응답 문자열(값)만 한글로 둔다.
+    CRITICAL = "긴급"
+    HIGH = "높음"
+    MEDIUM = "보통"
+    LOW = "낮음"
 
 
 class BatchItemStatus(str, Enum):
@@ -53,10 +54,12 @@ class BatchItemStatus(str, Enum):
     FAIL = "fail"
 ```
 
-| 열거형 | 값 | 산출 |
+| 열거형 | 값(응답 문자열) | 산출 |
 |--------|-----|------|
-| `RiskLevel` | `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` | Tool ② |
+| `RiskLevel` | `긴급` / `높음` / `보통` / `낮음` | Tool ② |
 | `BatchItemStatus` | `success` / `fail` | 배치 처리 결과 |
+
+> `RiskLevel`은 **Tool ②가 산출**하여 응답 `result.riskLevel`을 만들 때 쓰이고, 동시에 LLM 프롬프트 컨텍스트로도 주입된다. 값이 곧 클라이언트가 받는 문자열이므로 **한글**(`긴급`/`높음`/`보통`/`낮음`)로 고정한다. Python 멤버 이름은 ASCII를 유지한다.
 
 > `logLevel`·`logType`·`domain`은 현재 자유 문자열로 둔다. 값 집합이 확정되면 동일 방식으로 Enum화한다(3장 확장 포인트).
 
@@ -66,30 +69,34 @@ class BatchItemStatus(str, Enum):
 
 > 필드 표의 **속성**은 파이썬 snake_case, **별칭**은 와이어 camelCase다. 타입은 파이썬 타입 기준.
 
-### 2-1. 단건 요청 — `LogAnalyzeRequest`
+### 2-1. 단건 요청 — `LogAnalyzeRequest` (통과형 / passthrough)
 
 1차 필터(FATAL)를 거친 로그의 식별자·메타·원문. `label`·`eventId`는 **받지 않는다**([API.md 5.1](API.md)).
 
+**설계 방침 — 변환·파싱하지 않는다.** 요청 값은 거의 그대로 Tool/LLM으로 전달되므로 모델은 *통과형*으로 둔다.
+- 모든 메타·원문 필드는 **문자열 그대로** 보관한다. `logTs`도 `datetime`으로 파싱하지 않는다.
+- 타입 강제 변환·범위 제약 등 부가 검증은 두지 않고, FastAPI가 **요청 형태(필드 존재·기본 타입)만 검증**하게 한다.
+- 그럼에도 모델을 두는 이유: ① FastAPI의 **OpenAPI 계약** 자동 생성(Spring 연동), ② Tool들이 **필드를 이름으로 접근**(Tool④ `node`, Tool② `log_level`/`content` 등).
+
 ```python
 # models/analyze.py
-from pydantic import Field
 from .base import CamelModel
 
 
 class LogAnalyzeRequest(CamelModel):
-    log_id: int = Field(ge=0)
+    log_id: int
     node: str
     node_repeat: str
     component: str
     log_type: str
-    log_ts: str
+    log_ts: str        # 원문 문자열 그대로 — datetime 파싱하지 않음
     log_level: str
     content: str
 ```
 
-| 속성 | 별칭 | 타입 | 필수 | 제약/설명 |
-|------|------|------|:---:|-----------|
-| log_id | logId | int | ✔ | `ge=0`, 로그 식별자 |
+| 속성 | 별칭 | 타입 | 필수 | 설명 |
+|------|------|------|:---:|------|
+| log_id | logId | int | ✔ | 로그 식별자 |
 | node | node | str | ✔ | 노드 |
 | node_repeat | nodeRepeat | str | ✔ | 노드 반복 정보 |
 | component | component | str | ✔ | 컴포넌트 |
