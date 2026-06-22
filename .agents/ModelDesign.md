@@ -65,7 +65,7 @@ class ProcessStatus(str, Enum):   # 배치 항목의 "처리 완료 여부" (정
 > `RiskLevel`·`LogStatus`는 **Tool ②가 산출**하여 응답(`result.riskLevel`, `status`)을 만들고 LLM 컨텍스트로도 주입된다. 값이 곧 클라이언트가 받는 문자열이라 **한글**로 고정한다.
 > `ProcessStatus`(success/fail)는 "로그 판정(정상/이상)"과 **다른 개념** — 배치 항목의 처리 성공/실패를 가리킨다(2-5).
 
-> `logLevel`·`logType`·`domain`은 현재 자유 문자열로 둔다. 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다(4장 확장 포인트).
+> `logLevel`·`logType`은 현재 자유 문자열로 둔다. 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다(4장 확장 포인트). (`domain`은 BGL 고정 요청 입력이라 해당 없음)
 
 ---
 
@@ -96,6 +96,7 @@ class LogAnalyzeRequest(CamelModel):
     log_ts: str        # "yyyy-MM-dd HH:mm:ss" 문자열 — datetime 파싱하지 않음
     log_level: str
     content: str
+    domain: str        # BGL 고정값 (요청 입력, 응답에는 없음)
 ```
 
 | 속성 | 별칭 | 타입 | 필수 | 설명 |
@@ -108,11 +109,13 @@ class LogAnalyzeRequest(CamelModel):
 | log_ts | logTs | str | ✔ | 로그 타임스탬프 — `yyyy-MM-dd HH:mm:ss` 형식 문자열 (파싱 없이 그대로 수신) |
 | log_level | logLevel | str | ✔ | 로그 레벨 |
 | content | content | str | ✔ | 로그 내용 |
+| domain | domain | str | ✔ | 도메인 — **BGL 고정값** (요청 입력, 응답 미포함) |
 
 ### 2-2. 분석 결과 본문 — `AnalysisResult`
 
 단건·배치가 **동일한 결과 본문**을 공유하며, **정상·이상 모두 `result`를 채운다.**
-정상이면 `summary`·`analysis`에 **정상 사유**만 담고, 나머지는 빈값으로 둔다 — 문자열 필드(`domain`·`action`)는 `""`, 타입 필드(`riskLevel`·`clusterId`)는 `null`. `analyzedAt`은 공통.
+정상이면 `summary`·`analysis`에 **정상 사유**만 담고, 나머지는 빈값으로 둔다 — 문자열 필드(`action`)는 `""`, 타입 필드(`riskLevel`·`clusterId`)는 `null`. `analyzedAt`은 공통.
+> `domain`은 **BGL 고정 요청 입력**이므로 결과 본문(응답)에는 포함하지 않는다.
 
 ```python
 from datetime import datetime
@@ -123,7 +126,6 @@ _TS_FMT = "%Y-%m-%d %H:%M:%S"
 
 
 class AnalysisResult(CamelModel):
-    domain: str                                    # 이상: 도메인 / 정상: "" (빈 문자열)
     risk_level: RiskLevel | None = None            # 이상: 위험도 / 정상: null (Literal이라 "" 불가)
     summary: str                                   # 공통 — 정상이면 정상 사유
     analysis: str                                  # 공통 — 정상이면 정상 사유
@@ -138,11 +140,10 @@ class AnalysisResult(CamelModel):
 
 | 속성 | 별칭 | 타입 | 이상 | 정상 | 산출 |
 |------|------|------|------|------|------|
-| domain | domain | str | 도메인 | `""` | LLM 분석 |
 | risk_level | riskLevel | `RiskLevel` \| None | 위험도 | `null` | Tool ② |
-| summary | summary | str | 분석 요약 | 정상 사유 | LLM 분석 |
-| analysis | analysis | str | 분석 내용 | 정상 사유 | LLM 분석 |
-| action | action | str | 대응 방안 | `""` | LLM 분석 |
+| summary | summary | str | 분석 요약 | 정상 사유 | LLM |
+| analysis | analysis | str | 분석 내용 | 정상 사유 | LLM |
+| action | action | str | 대응 방안 | `""` | LLM |
 | cluster_id | clusterId | int \| None | 클러스터 식별자 | `null` | Tool ③ |
 | analyzed_at | analyzedAt | datetime | 분석 시각 | 판정 시각 | 결과 매핑 (`yyyy-MM-dd HH:mm:ss` 직렬화) |
 
@@ -251,7 +252,7 @@ class ErrorResponse(CamelModel):
 ### 2-7. LLM 구조화 출력 모델 — `LLMAnalysis` (내부 전용)
 
 LLM이 산출하는 값만 담는 **내부 모델**. 외부 DTO와 분리해 `services/`에 둔다.
-`risk_level`(Tool ②)·`cluster_id`(Tool ③)·`event_id`(Tool ①)는 **LLM이 만들지 않으므로 포함하지 않는다.**
+`risk_level`(Tool ②)·`cluster_id`(Tool ③)·`event_id`(Tool ①)·`domain`(BGL 고정·요청 입력)은 **LLM이 만들지 않으므로 포함하지 않는다.**
 
 ```python
 # services/llm_schema.py
@@ -259,7 +260,6 @@ from pydantic import BaseModel  # 외부 노출 없음 → CamelModel 불필요
 
 
 class LLMAnalysis(BaseModel):
-    domain: str
     summary: str
     analysis: str
     action: str
@@ -267,7 +267,7 @@ class LLMAnalysis(BaseModel):
 ```
 
 > `with_structured_output(LLMAnalysis)`로 수신한다. **결과 매핑 단계**에서 `LLMAnalysis` + `risk_level` + `cluster_id` + `analyzed_at`을 합쳐 `AnalysisResult`(단건·배치 공통)로 변환한다. `reason`은 응답에 싣지 않는다.
-> 단, **`status="정상"`이면 전체 분석 대신 정상 사유만** 생성하여 `summary`·`analysis`에 담고, `domain`·`action`은 `""`, `riskLevel`·`clusterId`는 `null`로 둔다(2-2). `result` 자체는 정상·이상 모두 채워진다.
+> 단, **`status="정상"`이면 전체 분석 대신 정상 사유만** 생성하여 `summary`·`analysis`에 담고, `action`은 `""`, `riskLevel`·`clusterId`는 `null`로 둔다(2-2). `result` 자체는 정상·이상 모두 채워진다.
 
 ---
 
@@ -324,7 +324,7 @@ class LLMError(AppError):          # 호출 실패 + 구조화 출력 파싱 실
 
 ## 4. 확장 포인트
 
-- **고정 값 타입 확장:** `logLevel`·`logType`·`domain` 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다.
+- **고정 값 타입 확장:** `logLevel`·`logType` 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다.
 - **clusterId 미할당:** 클러스터가 없을 때의 표현(`null` 허용 vs `-1`/`0` 센티넬)을 Tool ③ 정책 확정 후 결정한다.
 - **에러 코드 카탈로그:** 현재 표는 시작점이다. 이벤트 템플릿 매칭 실패, 내부 정의 문서 로드 실패(`CONFIG_ERROR` 등) 등 도메인 오류가 정해지면 코드·상태를 추가한다.
 - **logTs 타입:** 현재 원문 문자열 수신. 포맷이 표준화되면 `datetime` 파싱으로 승격을 검토한다.

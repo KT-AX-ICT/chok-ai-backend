@@ -1,7 +1,7 @@
 # 로그 분석 API — 명세 및 설계
 
 > Spring 백엔드가 **1차 필터링(FATAL 레벨)** 한 로그를 받아, AI가 분석하여
-> 도메인·위험도·요약·분석·대응 방안·클러스터·이벤트ID를 돌려주는 API.
+> 위험도·요약·분석·대응 방안·클러스터·이벤트ID를 돌려주는 API.
 > 시스템 전체 구성은 [ArchitectureGuide.md](ArchitectureGuide.md), 단계별 개발 계획은 [implementation_plan.md](implementation_plan.md) 참조.
 
 ---
@@ -20,6 +20,13 @@
 | POST | `/ai/v1/analyze` | 로그 1건 분석 (수동 / 개별 재처리용) |
 | POST | `/ai/v1/analyze/batch` | 로그 다건 분석 (스케줄러 기본 경로) |
 
+### 공통 사항
+
+- **Base URL**: `/ai/v1`
+- **Content-Type**: `application/json`
+- **시각 표기**: 모든 시각 문자열은 `yyyy-MM-dd HH:mm:ss` 형식 (요청 `logTs`, 응답 `analyzedAt`)
+- **인증**: 미정(보류) — 추후 결정
+
 ---
 
 ## 2. 핵심 설계 결정
@@ -31,6 +38,7 @@
 | **Tool 4개 + 실행 순서** | ①(템플릿)→②(이상 여부·긴급도) 후, **②가 이상이면** ③(클러스터)·④(Node 정보)를 수행 (아래 4·5장) | ②가 정상으로 판정하면 ③④ 생략하고 LLM 직행 |
 | **요청 필드 정리** | 요청에서 `label`·`eventId` 제거 (1차 필터 후 식별자/메타/내용만 전달) | 6장 스키마 반영 |
 | **응답에 `eventId` 포함** | 이벤트 템플릿 분류 결과를 응답으로 회신 | 6장 스키마 반영 |
+| **`domain` 고정 처리** | `domain`은 **BGL 고정값** — **요청에만** 포함하고 응답에는 싣지 않음 | 5장 스키마 반영 |
 
 ---
 
@@ -62,7 +70,7 @@ flowchart TB
 1. 요청 로그를 **① 이벤트 템플릿 분류** Tool에 전달해 `eventId`를 확보한다. (선행 필수)
 2. **② 이상 여부 판단 + 긴급도 분류**가 ① 결과를 기반으로 `status`(정상/이상)·`riskLevel`을 산출한다. **여기서 분기한다.**
 3. ②가 **`정상`**으로 판정하면 ③④를 건너뛰고 **바로 LLM 분석**으로 이어져 정상 사유(`summary`·`analysis`)만 작성한다.
-4. ②가 **`이상`**이면 **③(클러스터)·④(Node 정보 조회)** 를 수행한 뒤 LLM 분석에 합류하여 `result`의 모든 필드(도메인·위험도·요약·분석·대응·클러스터)를 채운다. (정상 경로는 `domain`·`action`=`""`, `riskLevel`·`clusterId`=`null`)
+4. ②가 **`이상`**이면 **③(클러스터)·④(Node 정보 조회)** 를 수행한 뒤 LLM 분석에 합류하여 `result`의 모든 필드(위험도·요약·분석·대응·클러스터)를 채운다. (정상 경로는 `action`=`""`, `riskLevel`·`clusterId`=`null`)
 5. 결과를 응답 스키마로 매핑하여 `eventId`·`status`(정상/이상)·`result`(정상·이상 모두 포함)를 반환한다.
 
 ---
@@ -101,7 +109,8 @@ flowchart TB
   "logType": "string",
   "logTs": "string",
   "logLevel": "string",
-  "content": "string"
+  "content": "string",
+  "domain": "string"
 }
 ```
 
@@ -115,10 +124,11 @@ flowchart TB
 | logTs | str | 로그 타임스탬프 (`yyyy-MM-dd HH:mm:ss` 형식 문자열) |
 | logLevel | str | 로그 레벨 |
 | content | str | 로그 내용 |
+| domain | str | 도메인 — **BGL 고정값** (요청 입력, 응답 미포함) |
 
 #### Response
 
-`result`는 정상·이상 모두 포함된다. **`정상`이면** `summary`·`analysis`에 정상 사유만 담기고, `domain`·`action`은 `""`, `riskLevel`·`clusterId`는 `null`이다. 아래 예시는 `이상`인 경우다.
+`result`는 정상·이상 모두 포함된다. **`정상`이면** `summary`·`analysis`에 정상 사유만 담기고, `action`은 `""`, `riskLevel`·`clusterId`는 `null`이다. 아래 예시는 `이상`인 경우다.
 
 ```json
 {
@@ -126,7 +136,6 @@ flowchart TB
   "eventId": "string",
   "status": "정상 | 이상",
   "result": {
-    "domain": "string",
     "riskLevel": "string",
     "summary": "string",
     "analysis": "string",
@@ -144,11 +153,10 @@ flowchart TB
 | eventId | str | 이벤트 식별자 | Tool ① |
 | status | str | 로그 판정 (`정상` / `이상`) | Tool ② |
 | result | object | 분석 결과 (정상·이상 모두 포함) | 결과 매핑 |
-| result.domain | str | 도메인 (`정상`이면 `""`) | LLM 분석 |
 | result.riskLevel | str \| null | 위험도 (`긴급`/`높음`/`보통`/`낮음`). `정상`이면 `null` | Tool ② |
-| result.summary | str | 요약 — `정상`이면 정상 사유 | LLM 분석 |
-| result.analysis | str | 분석 내용 — `정상`이면 정상 사유 | LLM 분석 |
-| result.action | str | 대응 방안 (`정상`이면 `""`) | LLM 분석 |
+| result.summary | str | 요약 — `정상`이면 정상 사유 | LLM |
+| result.analysis | str | 분석 내용 — `정상`이면 정상 사유 | LLM |
+| result.action | str | 대응 방안 (`정상`이면 `""`) | LLM |
 | result.clusterId | int \| null | 클러스터 식별자 (`정상`이면 `null`) | Tool ③ |
 | result.analyzedAt | str | 분석/판정 시각 (`yyyy-MM-dd HH:mm:ss` 문자열) | 응답 매핑 |
 | processingTimeMs | int | 처리 소요 시간 (ms) | 응답 매핑 |
@@ -175,7 +183,8 @@ flowchart TB
       "logType": "string",
       "logTs": "string",
       "logLevel": "string",
-      "content": "string"
+      "content": "string",
+      "domain": "string"
     }
   ]
 }
@@ -183,7 +192,7 @@ flowchart TB
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| logs | array | 분석할 로그 객체 배열 (각 객체 필드는 단건 분석 Request와 동일) |
+| logs | array | 분석할 로그 객체 배열 (각 객체 필드는 단건 분석 Request와 동일, `domain` 포함) |
 
 #### Response
 
@@ -198,7 +207,6 @@ flowchart TB
       "processStatus": "success",
       "status": "정상 | 이상",
       "result": {
-        "domain": "string",
         "riskLevel": "string",
         "summary": "string",
         "analysis": "string",
@@ -226,7 +234,7 @@ flowchart TB
 | results[].eventId | str \| null | 이벤트 식별자 (처리 실패 시 null) |
 | results[].processStatus | str | 처리 완료 여부 (`success` / `fail`) |
 | results[].status | str \| null | 로그 판정 (`정상` / `이상`). 처리 실패 시 null |
-| results[].result | object \| null | 성공 시 분석 결과(domain, riskLevel, summary, analysis, action, clusterId, analyzedAt). `정상`이면 일부 필드만 채워짐(summary·analysis). 처리 실패 시 null |
+| results[].result | object \| null | 성공 시 분석 결과(riskLevel, summary, analysis, action, clusterId, analyzedAt). `정상`이면 일부 필드만 채워짐(summary·analysis). 처리 실패 시 null |
 | results[].error | str | 처리 실패 시 오류 메시지 |
 
 ---
