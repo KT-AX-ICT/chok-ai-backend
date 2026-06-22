@@ -1,7 +1,11 @@
+import json
+
 from app.agents.tools.cluster import (
+    METADATA_PATH,
     MISC_CLUSTER_ID,
     ClusterAssigner,
     ClusterResult,
+    assign_cluster,
 )
 
 # 주입용 가짜 클러스터 (실제 clusters.json 비의존)
@@ -57,3 +61,30 @@ def test_duplicate_event_id_across_clusters_raises() -> None:
         assert "E1" in str(e)
     else:
         raise AssertionError("중복 event_id 인데 ValueError 가 발생하지 않음")
+
+
+def test_assign_cluster_real_metadata_covered() -> None:
+    result = assign_cluster("E111")
+
+    assert result.cluster_id == 3
+    assert result.matched is True
+
+
+def test_assign_cluster_real_metadata_uncovered_and_unknown() -> None:
+    uncovered = assign_cluster("E1")
+    unknown = assign_cluster("unknown")
+
+    assert uncovered.cluster_id == 99 and uncovered.matched is True
+    assert unknown.cluster_id == 99 and unknown.matched is False
+
+
+def test_every_curated_event_id_maps_to_its_cluster() -> None:
+    clusters = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+
+    for cluster in clusters:
+        if cluster["id"] == 99:  # 미분류는 빈 매핑
+            continue
+        for entry in cluster["event_template"]:
+            result = assign_cluster(entry["event_id"])
+            assert result.cluster_id == cluster["id"]
+            assert result.matched is True
