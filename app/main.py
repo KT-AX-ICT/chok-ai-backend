@@ -2,14 +2,14 @@
 CHOK AI Backend — FastAPI 게이트웨이
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from app.api.router import router
-from app.core.config import Settings
+from app.core.config import get_settings
+from app.core.errors import handle_unexpected
 
-settings = Settings()
+settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
@@ -29,6 +29,9 @@ app.add_middleware(
     max_age=settings.cors_max_age,
 )
 
+# 전역 예외 핸들러 (core 위임)
+app.add_exception_handler(Exception, handle_unexpected)
+
 # 라우터 등록
 app.include_router(router)
 
@@ -36,15 +39,3 @@ app.include_router(router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error_code": "INTERNAL_ERROR",
-            "message": "처리되지 않은 서버 오류",
-            "detail": str(exc),
-        },
-    )
