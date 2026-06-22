@@ -33,11 +33,8 @@ class Settings(BaseSettings):
         validation_alias="ANTHROPIC_API_KEY",
     )
     llm_model: str = "claude-haiku-4-5-20251001"
-    llm_temprature: float = 0.2
+    llm_temperature: float = 0.2
     llm_max_tokens: int = 1024
-
-    model_config = SettingsConfigDict(
-    )
     
 
     model_config = SettingsConfigDict(
