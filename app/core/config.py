@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,21 @@ class Settings(BaseSettings):
     cors_allow_credentials: bool = True
     cors_max_age: int = 3600
 
+    # ── LLM ─────────────────────────────────────
+    # ANTHROPIC_API_KEY는 prefix 없이 표준 이름 그대로 읽음
+    # (validation_alias가 env_prefix를 무시함)
+    anthropic_api_key: str = Field(
+        default="",
+        validation_alias="ANTHROPIC_API_KEY",
+    )
+    llm_model: str = "claude-haiku-4-5-20251001"
+    llm_temprature: float = 0.2
+    llm_max_tokens: int = 1024
+
+    model_config = SettingsConfigDict(
+    )
+    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -36,3 +52,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+
