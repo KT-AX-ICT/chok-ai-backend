@@ -28,16 +28,20 @@ Tool①이 산출한 `event_id`를 사전 정의된 **클러스터(장애 유형
 ```python
 class ClusterResult(BaseModel):
     cluster_id: int   # API result.clusterId 로 직결
-    matched: bool     # 큐레이션 클러스터(0~7) 매칭 여부
+    matched: bool     # event_id 가 유효한지(unknown 아님) = 클러스터 배정 성공 여부
 ```
 
-| 입력 event_id | cluster_id | matched |
-| --- | --- | --- |
-| 큐레이션 클러스터에 있는 15종 (E111 등) | 해당 id (0~7) | True |
-| 클러스터에 없는 event_id (E1, E77 등) | 99 (미분류) | False |
-| `"unknown"` | 99 (미분류) | False |
+| 입력 event_id | cluster_id | matched | 의미 |
+| --- | --- | --- | --- |
+| 큐레이션 클러스터의 event_id (E111 등 15종) | 0~7 | True | 정상 분류 |
+| 유효하지만 미커버 event_id (E1, E77 등) | 99 | True | 유효 로그, 미분류 버킷 → 관리자 검토 |
+| `"unknown"` | 99 | False | Tool① 미매칭 (잠정, 아래 라우팅 참고) |
+
+`matched` 는 "큐레이션 클러스터 배정 성공"이 아니라 **"event_id 가 유효한가(unknown 아님)"** 를 뜻한다. 따라서 미커버 유효 event_id 도 matched=True 로 미분류(99)에 배정된다. "큐레이션 클러스터에 들어갔는지" 는 `cluster_id != 99` 로 판별한다.
 
 `cluster_title`/`importance`는 결과 모델에 포함하지 않는다(필요 시 Spring이 별도 조회). 메타데이터에는 존재한다.
+
+> **unknown 라우팅 (논의 중)**: `event_id == "unknown"` 로그는 오케스트레이션 단계에서 클러스터 노드를 건너뛰고 답변 생성으로 직행할 가능성이 높다(라우팅은 오케스트레이션 책임, 확정 전). Tool③ 자체는 방어적으로 `99 / matched=False` 를 반환하되, 이 동작은 unknown 처리 구조 확정 시 재검토한다.
 
 ## 4. 미분류 클러스터 (id: 99)
 
@@ -70,6 +74,7 @@ app/agents/tools/cluster.py
 ```
 
 - 역인덱스는 `event_template`이 **비어있지 않은** 클러스터(0~7)에서만 구성. 99(미분류)는 인덱스에 넣지 않음.
+- `assign(event_id)` 로직: 역인덱스에 있으면 `(cluster_id, matched=True)`. 없으면 `(99, matched = (event_id != UNKNOWN_EVENT_ID))` — 즉 유효 미커버는 True, `"unknown"`만 False. unknown 판별은 Tool①의 `UNKNOWN_EVENT_ID` 상수를 재사용(단일 출처).
 - 프레임워크 비종속 순수 함수. 오케스트레이션이 노드로 감쌈.
 
 ## 6. 엣지 / 에러 처리 (Tool① 원칙 계승)
@@ -84,8 +89,8 @@ app/agents/tools/cluster.py
 
 - **단위**
   - 커버된 event_id → 올바른 cluster_id, matched=True (예: `E111` → 3, `E23` → 6)
-  - 미커버 event_id (예: `E1`) → 99, matched=False
-  - `"unknown"` → 99, matched=False
+  - 미커버 유효 event_id (예: `E1`) → 99, **matched=True** (유효 로그 → 미분류 배정)
+  - `"unknown"` → 99, **matched=False** (Tool① 미매칭)
   - 중복 배정 메타데이터 주입 → 로드 시 에러(fail-fast) 검증
 - **정합성**: clusters.json의 15개 event_id가 전부 1:1 매핑되는지 전수 확인
 - (선택) Tool① → Tool③ 연계 스모크: 로그 `content` → `event_id` → `cluster_id`
