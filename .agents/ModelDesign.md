@@ -32,21 +32,20 @@ class CamelModel(BaseModel):
 
 > 응답은 라우터의 `response_model` 지정 또는 `model_dump(by_alias=True)`로 camelCase 출력을 보장한다.
 
-### 1-2. 공통 열거형 (Enum)
+### 1-2. 공통 타입 (고정 값 집합)
 
-문자열 필드 중 값 집합이 고정된 것은 `str, Enum`으로 정의해 검증·자동완성·문서화를 강화한다.
+값 집합이 고정된 문자열 필드는 좁은 타입으로 정의해 검증·OpenAPI 문서화를 강화한다.
+
+- **`RiskLevel`은 `Literal` 타입 별칭으로 둔다.** 응답 문자열이 곧 한글 값이고 영문 멤버명↔한글 값 매핑이 불필요하므로, Enum 클래스를 만들지 않는다.
+- **`BatchItemStatus`는 Enum으로 둔다.** 멤버명이 값과 1:1이라 군더더기가 없고, 배치 매핑·검증 로직에서 멤버를 참조한다.
 
 ```python
 # models/enums.py
 from enum import Enum
+from typing import Literal
 
-
-class RiskLevel(str, Enum):
-    # 멤버 이름은 ASCII로 두고, 응답 문자열(값)만 한글로 둔다.
-    CRITICAL = "긴급"
-    HIGH = "높음"
-    MEDIUM = "보통"
-    LOW = "낮음"
+# 응답 문자열 그대로. Tool ②가 이 중 하나를 산출.
+RiskLevel = Literal["긴급", "높음", "보통", "낮음"]
 
 
 class BatchItemStatus(str, Enum):
@@ -54,12 +53,13 @@ class BatchItemStatus(str, Enum):
     FAIL = "fail"
 ```
 
-| 열거형 | 값(응답 문자열) | 산출 |
-|--------|-----|------|
+| 타입 | 값(응답 문자열) | 산출 |
+|------|-----|------|
 | `RiskLevel` | `긴급` / `높음` / `보통` / `낮음` | Tool ② |
 | `BatchItemStatus` | `success` / `fail` | 배치 처리 결과 |
 
-> `RiskLevel`은 **Tool ②가 산출**하여 응답 `result.riskLevel`을 만들 때 쓰이고, 동시에 LLM 프롬프트 컨텍스트로도 주입된다. 값이 곧 클라이언트가 받는 문자열이므로 **한글**(`긴급`/`높음`/`보통`/`낮음`)로 고정한다. Python 멤버 이름은 ASCII를 유지한다.
+> `RiskLevel`은 **Tool ②가 산출**하여 응답 `result.riskLevel`을 만들 때 쓰이고, 동시에 LLM 프롬프트 컨텍스트로도 주입된다. 값이 곧 클라이언트가 받는 문자열이라 **한글**로 고정한다.
+> 검증조차 불필요하면 plain `str`로 둬도 된다(통과형 선호 시) — 다만 그 경우 허용 값은 [API.md](API.md) 문서로만 보장된다.
 
 > `logLevel`·`logType`·`domain`은 현재 자유 문자열로 둔다. 값 집합이 확정되면 동일 방식으로 Enum화한다(3장 확장 포인트).
 
