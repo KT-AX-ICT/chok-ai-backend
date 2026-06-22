@@ -1,0 +1,974 @@
+{
+  "meta": {
+    "source": "loghub-master/BGL/BGL_2k.log_templates.csv",
+    "n_templates": 120,
+    "n_alert_templates": 15,
+    "event_id_scheme": "BGL_2k (구조화 CSV / eventid_card 와 동일 번호체계)",
+    "generated": "2026-06-21",
+    "purpose": "Drain/template-match 노드가 raw Content -> 정식 EventId 매핑에 참조하는 메타데이터",
+    "match_guide": "regex는 ^...$ 앵커, <*> -> (.*?) 비탐욕. 여러 템플릿이 매칭되면 literal_len 큰(가장 구체적인) 쪽 우선 선택. 매칭 0건이면 unknown 처리.",
+    "warning": "전체 BGL_templates.csv(377종)는 EventId 번호체계가 2k와 달라 (15/15 alert mismatch) 사용 금지. 반드시 2k 기준 EventId 사용."
+  },
+  "templates": [
+    {
+      "event_id": "E1",
+      "event_template": "<*> ddr error(s) detected and corrected on rank <*>, symbol <*> over <*> seconds",
+      "regex": "^(.*?)\\ ddr\\ error\\(s\\)\\ detected\\ and\\ corrected\\ on\\ rank\\ (.*?),\\ symbol\\ (.*?)\\ over\\ (.*?)\\ seconds$",
+      "n_tokens": 14,
+      "wildcard_count": 4,
+      "literal_len": 68
+    },
+    {
+      "event_id": "E2",
+      "event_template": "<*> ddr errors(s) detected and corrected on rank <*>, symbol <*>, bit <*>",
+      "regex": "^(.*?)\\ ddr\\ errors\\(s\\)\\ detected\\ and\\ corrected\\ on\\ rank\\ (.*?),\\ symbol\\ (.*?),\\ bit\\ (.*?)$",
+      "n_tokens": 13,
+      "wildcard_count": 4,
+      "literal_len": 61
+    },
+    {
+      "event_id": "E3",
+      "event_template": "<*> double-hummer alignment exceptions",
+      "regex": "^(.*?)\\ double\\-hummer\\ alignment\\ exceptions$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 35
+    },
+    {
+      "event_id": "E4",
+      "event_template": "<*> floating point alignment exceptions",
+      "regex": "^(.*?)\\ floating\\ point\\ alignment\\ exceptions$",
+      "n_tokens": 5,
+      "wildcard_count": 1,
+      "literal_len": 36
+    },
+    {
+      "event_id": "E5",
+      "event_template": "<*> L3 EDRAM error(s) (dcr <*>) detected and corrected",
+      "regex": "^(.*?)\\ L3\\ EDRAM\\ error\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ and\\ corrected$",
+      "n_tokens": 9,
+      "wildcard_count": 2,
+      "literal_len": 48
+    },
+    {
+      "event_id": "E6",
+      "event_template": "<*> L3 EDRAM error(s) (dcr <*>) detected and corrected over <*> seconds",
+      "regex": "^(.*?)\\ L3\\ EDRAM\\ error\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ and\\ corrected\\ over\\ (.*?)\\ seconds$",
+      "n_tokens": 12,
+      "wildcard_count": 3,
+      "literal_len": 62
+    },
+    {
+      "event_id": "E7",
+      "event_template": "<*> microseconds spent in the rbs signal handler during <*> calls. <*> microseconds was the maximum time for a single instance of a correctable ddr.",
+      "regex": "^(.*?)\\ microseconds\\ spent\\ in\\ the\\ rbs\\ signal\\ handler\\ during\\ (.*?)\\ calls\\.\\ (.*?)\\ microseconds\\ was\\ the\\ maximum\\ time\\ for\\ a\\ single\\ instance\\ of\\ a\\ correctable\\ ddr\\.$",
+      "n_tokens": 25,
+      "wildcard_count": 3,
+      "literal_len": 139
+    },
+    {
+      "event_id": "E8",
+      "event_template": "<*> torus receiver x+ input pipe error(s) (dcr <*>) detected and corrected",
+      "regex": "^(.*?)\\ torus\\ receiver\\ x\\+\\ input\\ pipe\\ error\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ and\\ corrected$",
+      "n_tokens": 12,
+      "wildcard_count": 2,
+      "literal_len": 68
+    },
+    {
+      "event_id": "E9",
+      "event_template": "<*> torus receiver y+ input pipe error(s) (dcr <*>) detected and corrected",
+      "regex": "^(.*?)\\ torus\\ receiver\\ y\\+\\ input\\ pipe\\ error\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ and\\ corrected$",
+      "n_tokens": 12,
+      "wildcard_count": 2,
+      "literal_len": 68
+    },
+    {
+      "event_id": "E10",
+      "event_template": "<*> torus receiver z+ input pipe error(s) (dcr <*>) detected and corrected",
+      "regex": "^(.*?)\\ torus\\ receiver\\ z\\+\\ input\\ pipe\\ error\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ and\\ corrected$",
+      "n_tokens": 12,
+      "wildcard_count": 2,
+      "literal_len": 68
+    },
+    {
+      "event_id": "E11",
+      "event_template": "<*> torus sender z- retransmission error(s) (dcr <*>) detected and corrected over <*> seconds",
+      "regex": "^(.*?)\\ torus\\ sender\\ z\\-\\ retransmission\\ error\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ and\\ corrected\\ over\\ (.*?)\\ seconds$",
+      "n_tokens": 14,
+      "wildcard_count": 3,
+      "literal_len": 84
+    },
+    {
+      "event_id": "E12",
+      "event_template": "<*> total interrupts. 0 critical input interrupts. <*> microseconds total spent on critical input interrupts, <*> microseconds max time in a critical input interrupt.",
+      "regex": "^(.*?)\\ total\\ interrupts\\.\\ 0\\ critical\\ input\\ interrupts\\.\\ (.*?)\\ microseconds\\ total\\ spent\\ on\\ critical\\ input\\ interrupts,\\ (.*?)\\ microseconds\\ max\\ time\\ in\\ a\\ critical\\ input\\ interrupt\\.$",
+      "n_tokens": 24,
+      "wildcard_count": 3,
+      "literal_len": 157
+    },
+    {
+      "event_id": "E13",
+      "event_template": "<*> tree receiver <*> in re-synch state event(s) (dcr <*>) detected",
+      "regex": "^(.*?)\\ tree\\ receiver\\ (.*?)\\ in\\ re\\-synch\\ state\\ event\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected$",
+      "n_tokens": 11,
+      "wildcard_count": 3,
+      "literal_len": 58
+    },
+    {
+      "event_id": "E14",
+      "event_template": "<*> tree receiver <*> in re-synch state event(s) (dcr <*>) detected over <*> seconds",
+      "regex": "^(.*?)\\ tree\\ receiver\\ (.*?)\\ in\\ re\\-synch\\ state\\ event\\(s\\)\\ \\(dcr\\ (.*?)\\)\\ detected\\ over\\ (.*?)\\ seconds$",
+      "n_tokens": 14,
+      "wildcard_count": 4,
+      "literal_len": 72
+    },
+    {
+      "event_id": "E15",
+      "event_template": "auxiliary processor.........................<*>",
+      "regex": "^auxiliary\\ processor\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 2,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E16",
+      "event_template": "byte ordering exception.....................<*>",
+      "regex": "^byte\\ ordering\\ exception\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E17",
+      "event_template": "Can not get assembly information for node card",
+      "regex": "^Can\\ not\\ get\\ assembly\\ information\\ for\\ node\\ card$",
+      "n_tokens": 8,
+      "wildcard_count": 0,
+      "literal_len": 46
+    },
+    {
+      "event_id": "E18",
+      "event_template": "CE sym <*>, at <*>, mask <*>",
+      "regex": "^CE\\ sym\\ (.*?),\\ at\\ (.*?),\\ mask\\ (.*?)$",
+      "n_tokens": 7,
+      "wildcard_count": 3,
+      "literal_len": 19
+    },
+    {
+      "event_id": "E19",
+      "event_template": "ciod: cpu <*> at treeaddr <*> sent unrecognized message <*>",
+      "regex": "^ciod:\\ cpu\\ (.*?)\\ at\\ treeaddr\\ (.*?)\\ sent\\ unrecognized\\ message\\ (.*?)$",
+      "n_tokens": 10,
+      "wildcard_count": 3,
+      "literal_len": 50
+    },
+    {
+      "event_id": "E20",
+      "event_template": "ciod: duplicate canonical-rank <*> to logical-rank <*> mapping at line <*> of node map file /<*>",
+      "regex": "^ciod:\\ duplicate\\ canonical\\-rank\\ (.*?)\\ to\\ logical\\-rank\\ (.*?)\\ mapping\\ at\\ line\\ (.*?)\\ of\\ node\\ map\\ file\\ /(.*?)$",
+      "n_tokens": 16,
+      "wildcard_count": 4,
+      "literal_len": 84
+    },
+    {
+      "event_id": "E21",
+      "event_template": "ciod: Error creating node map from file <*>: Bad file descriptor",
+      "regex": "^ciod:\\ Error\\ creating\\ node\\ map\\ from\\ file\\ (.*?):\\ Bad\\ file\\ descriptor$",
+      "n_tokens": 11,
+      "wildcard_count": 1,
+      "literal_len": 61
+    },
+    {
+      "event_id": "E22",
+      "event_template": "ciod: Error creating node map from file <*>: Block device required",
+      "regex": "^ciod:\\ Error\\ creating\\ node\\ map\\ from\\ file\\ (.*?):\\ Block\\ device\\ required$",
+      "n_tokens": 11,
+      "wildcard_count": 1,
+      "literal_len": 63
+    },
+    {
+      "event_id": "E23",
+      "event_template": "ciod: Error creating node map from file <*>: No child processes",
+      "regex": "^ciod:\\ Error\\ creating\\ node\\ map\\ from\\ file\\ (.*?):\\ No\\ child\\ processes$",
+      "n_tokens": 11,
+      "wildcard_count": 1,
+      "literal_len": 60
+    },
+    {
+      "event_id": "E24",
+      "event_template": "ciod: Error creating node map from file <*>: Permission denied",
+      "regex": "^ciod:\\ Error\\ creating\\ node\\ map\\ from\\ file\\ (.*?):\\ Permission\\ denied$",
+      "n_tokens": 10,
+      "wildcard_count": 1,
+      "literal_len": 59
+    },
+    {
+      "event_id": "E25",
+      "event_template": "ciod: Error loading /<*>: invalid or missing program image, Exec format error",
+      "regex": "^ciod:\\ Error\\ loading\\ /(.*?):\\ invalid\\ or\\ missing\\ program\\ image,\\ Exec\\ format\\ error$",
+      "n_tokens": 12,
+      "wildcard_count": 1,
+      "literal_len": 74
+    },
+    {
+      "event_id": "E26",
+      "event_template": "ciod: Error loading /<*>: invalid or missing program image, Permission denied",
+      "regex": "^ciod:\\ Error\\ loading\\ /(.*?):\\ invalid\\ or\\ missing\\ program\\ image,\\ Permission\\ denied$",
+      "n_tokens": 11,
+      "wildcard_count": 1,
+      "literal_len": 74
+    },
+    {
+      "event_id": "E27",
+      "event_template": "ciod: Error loading /<*>: program image too big, <*> > <*>",
+      "regex": "^ciod:\\ Error\\ loading\\ /(.*?):\\ program\\ image\\ too\\ big,\\ (.*?)\\ >\\ (.*?)$",
+      "n_tokens": 11,
+      "wildcard_count": 3,
+      "literal_len": 49
+    },
+    {
+      "event_id": "E28",
+      "event_template": "ciod: Error loading <*>: invalid or missing program image, No such file or directory",
+      "regex": "^ciod:\\ Error\\ loading\\ (.*?):\\ invalid\\ or\\ missing\\ program\\ image,\\ No\\ such\\ file\\ or\\ directory$",
+      "n_tokens": 14,
+      "wildcard_count": 1,
+      "literal_len": 81
+    },
+    {
+      "event_id": "E29",
+      "event_template": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to <*>:<*>: Link has been severed",
+      "regex": "^ciod:\\ Error\\ reading\\ message\\ prefix\\ after\\ LOAD_MESSAGE\\ on\\ CioStream\\ socket\\ to\\ (.*?):(.*?):\\ Link\\ has\\ been\\ severed$",
+      "n_tokens": 16,
+      "wildcard_count": 2,
+      "literal_len": 101
+    },
+    {
+      "event_id": "E30",
+      "event_template": "ciod: Error reading message prefix on CioStream socket to <*>:<*>, Connection reset by peer",
+      "regex": "^ciod:\\ Error\\ reading\\ message\\ prefix\\ on\\ CioStream\\ socket\\ to\\ (.*?):(.*?),\\ Connection\\ reset\\ by\\ peer$",
+      "n_tokens": 14,
+      "wildcard_count": 2,
+      "literal_len": 85
+    },
+    {
+      "event_id": "E31",
+      "event_template": "ciod: Error reading message prefix on CioStream socket to <*>:<*>, Connection timed out",
+      "regex": "^ciod:\\ Error\\ reading\\ message\\ prefix\\ on\\ CioStream\\ socket\\ to\\ (.*?):(.*?),\\ Connection\\ timed\\ out$",
+      "n_tokens": 13,
+      "wildcard_count": 2,
+      "literal_len": 81
+    },
+    {
+      "event_id": "E32",
+      "event_template": "ciod: Error reading message prefix on CioStream socket to <*>:<*>, Link has been severed",
+      "regex": "^ciod:\\ Error\\ reading\\ message\\ prefix\\ on\\ CioStream\\ socket\\ to\\ (.*?):(.*?),\\ Link\\ has\\ been\\ severed$",
+      "n_tokens": 14,
+      "wildcard_count": 2,
+      "literal_len": 82
+    },
+    {
+      "event_id": "E33",
+      "event_template": "ciod: failed to read message prefix on control stream (CioStream socket to <*>:<*>",
+      "regex": "^ciod:\\ failed\\ to\\ read\\ message\\ prefix\\ on\\ control\\ stream\\ \\(CioStream\\ socket\\ to\\ (.*?):(.*?)$",
+      "n_tokens": 13,
+      "wildcard_count": 2,
+      "literal_len": 76
+    },
+    {
+      "event_id": "E34",
+      "event_template": "ciod: generated <*> core files for program <*>",
+      "regex": "^ciod:\\ generated\\ (.*?)\\ core\\ files\\ for\\ program\\ (.*?)$",
+      "n_tokens": 8,
+      "wildcard_count": 2,
+      "literal_len": 40
+    },
+    {
+      "event_id": "E35",
+      "event_template": "ciod: In packet from node <*>.<*> (<*>), message code <*> is not <*> or <*> (softheader=<*> <*> <*> <*>)",
+      "regex": "^ciod:\\ In\\ packet\\ from\\ node\\ (.*?)\\.(.*?)\\ \\((.*?)\\),\\ message\\ code\\ (.*?)\\ is\\ not\\ (.*?)\\ or\\ (.*?)\\ \\(softheader=(.*?)\\ (.*?)\\ (.*?)\\ (.*?)\\)$",
+      "n_tokens": 19,
+      "wildcard_count": 10,
+      "literal_len": 74
+    },
+    {
+      "event_id": "E36",
+      "event_template": "ciod: LOGIN chdir(<*>) failed: Input/output error",
+      "regex": "^ciod:\\ LOGIN\\ chdir\\((.*?)\\)\\ failed:\\ Input/output\\ error$",
+      "n_tokens": 6,
+      "wildcard_count": 1,
+      "literal_len": 46
+    },
+    {
+      "event_id": "E37",
+      "event_template": "ciod: LOGIN chdir(<*>) failed: No such file or directory",
+      "regex": "^ciod:\\ LOGIN\\ chdir\\((.*?)\\)\\ failed:\\ No\\ such\\ file\\ or\\ directory$",
+      "n_tokens": 9,
+      "wildcard_count": 1,
+      "literal_len": 53
+    },
+    {
+      "event_id": "E38",
+      "event_template": "ciod: Message code <*> is not <*> or <*>",
+      "regex": "^ciod:\\ Message\\ code\\ (.*?)\\ is\\ not\\ (.*?)\\ or\\ (.*?)$",
+      "n_tokens": 9,
+      "wildcard_count": 3,
+      "literal_len": 31
+    },
+    {
+      "event_id": "E39",
+      "event_template": "ciod: Missing or invalid fields on line <*> of node map file /<*>",
+      "regex": "^ciod:\\ Missing\\ or\\ invalid\\ fields\\ on\\ line\\ (.*?)\\ of\\ node\\ map\\ file\\ /(.*?)$",
+      "n_tokens": 13,
+      "wildcard_count": 2,
+      "literal_len": 59
+    },
+    {
+      "event_id": "E40",
+      "event_template": "ciod: pollControlDescriptors: Detected the debugger died.",
+      "regex": "^ciod:\\ pollControlDescriptors:\\ Detected\\ the\\ debugger\\ died\\.$",
+      "n_tokens": 6,
+      "wildcard_count": 0,
+      "literal_len": 57
+    },
+    {
+      "event_id": "E41",
+      "event_template": "ciod: Received signal <*>, code=<*>, errno=<*>, address=<*>",
+      "regex": "^ciod:\\ Received\\ signal\\ (.*?),\\ code=(.*?),\\ errno=(.*?),\\ address=(.*?)$",
+      "n_tokens": 7,
+      "wildcard_count": 4,
+      "literal_len": 47
+    },
+    {
+      "event_id": "E42",
+      "event_template": "ciod: Z coordinate <*> exceeds physical dimension <*> at line <*> of node map file /<*>",
+      "regex": "^ciod:\\ Z\\ coordinate\\ (.*?)\\ exceeds\\ physical\\ dimension\\ (.*?)\\ at\\ line\\ (.*?)\\ of\\ node\\ map\\ file\\ /(.*?)$",
+      "n_tokens": 16,
+      "wildcard_count": 4,
+      "literal_len": 75
+    },
+    {
+      "event_id": "E43",
+      "event_template": "core configuration register: <*>",
+      "regex": "^core\\ configuration\\ register:\\ (.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 29
+    },
+    {
+      "event_id": "E44",
+      "event_template": "critical input interrupt (unit=<*> bit=<*>): warning for torus y+ wire",
+      "regex": "^critical\\ input\\ interrupt\\ \\(unit=(.*?)\\ bit=(.*?)\\):\\ warning\\ for\\ torus\\ y\\+\\ wire$",
+      "n_tokens": 10,
+      "wildcard_count": 2,
+      "literal_len": 64
+    },
+    {
+      "event_id": "E45",
+      "event_template": "critical input interrupt (unit=<*> bit=<*>): warning for torus z- wire",
+      "regex": "^critical\\ input\\ interrupt\\ \\(unit=(.*?)\\ bit=(.*?)\\):\\ warning\\ for\\ torus\\ z\\-\\ wire$",
+      "n_tokens": 10,
+      "wildcard_count": 2,
+      "literal_len": 64
+    },
+    {
+      "event_id": "E46",
+      "event_template": "critical input interrupt (unit=<*> bit=<*>): warning for torus z+ wire, suppressing further interrupts of same type",
+      "regex": "^critical\\ input\\ interrupt\\ \\(unit=(.*?)\\ bit=(.*?)\\):\\ warning\\ for\\ torus\\ z\\+\\ wire,\\ suppressing\\ further\\ interrupts\\ of\\ same\\ type$",
+      "n_tokens": 16,
+      "wildcard_count": 2,
+      "literal_len": 109
+    },
+    {
+      "event_id": "E47",
+      "event_template": "critical input interrupt (unit=<*> bit=<*>): warning for tree C1 wire, suppressing further interrupts of same type",
+      "regex": "^critical\\ input\\ interrupt\\ \\(unit=(.*?)\\ bit=(.*?)\\):\\ warning\\ for\\ tree\\ C1\\ wire,\\ suppressing\\ further\\ interrupts\\ of\\ same\\ type$",
+      "n_tokens": 16,
+      "wildcard_count": 2,
+      "literal_len": 108
+    },
+    {
+      "event_id": "E48",
+      "event_template": "critical input interrupt enable...<*>",
+      "regex": "^critical\\ input\\ interrupt\\ enable\\.\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E49",
+      "event_template": "data address space................<*>",
+      "regex": "^data\\ address\\ space\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E50",
+      "event_template": "data address: <*>",
+      "regex": "^data\\ address:\\ (.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 14
+    },
+    {
+      "event_id": "E51",
+      "event_template": "data cache search parity error detected. attempting to correct",
+      "regex": "^data\\ cache\\ search\\ parity\\ error\\ detected\\.\\ attempting\\ to\\ correct$",
+      "n_tokens": 9,
+      "wildcard_count": 0,
+      "literal_len": 62
+    },
+    {
+      "event_id": "E52",
+      "event_template": "data storage interrupt",
+      "regex": "^data\\ storage\\ interrupt$",
+      "n_tokens": 3,
+      "wildcard_count": 0,
+      "literal_len": 22
+    },
+    {
+      "event_id": "E53",
+      "event_template": "data store interrupt caused by dcbf.........<*>",
+      "regex": "^data\\ store\\ interrupt\\ caused\\ by\\ dcbf\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 6,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E54",
+      "event_template": "data store interrupt caused by icbi.........<*>",
+      "regex": "^data\\ store\\ interrupt\\ caused\\ by\\ icbi\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 6,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E55",
+      "event_template": "data TLB error interrupt",
+      "regex": "^data\\ TLB\\ error\\ interrupt$",
+      "n_tokens": 4,
+      "wildcard_count": 0,
+      "literal_len": 24
+    },
+    {
+      "event_id": "E56",
+      "event_template": "dbcr0=<*> dbsr=<*> ccr0=<*>",
+      "regex": "^dbcr0=(.*?)\\ dbsr=(.*?)\\ ccr0=(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 3,
+      "literal_len": 18
+    },
+    {
+      "event_id": "E57",
+      "event_template": "debug interrupt enable............<*>",
+      "regex": "^debug\\ interrupt\\ enable\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E58",
+      "event_template": "debug wait enable.................<*>",
+      "regex": "^debug\\ wait\\ enable\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E59",
+      "event_template": "disable store gathering..................<*>",
+      "regex": "^disable\\ store\\ gathering\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E60",
+      "event_template": "Error receiving packet on tree network, expecting type <*> instead of type <*> (softheader=<*> <*> <*> <*>) PSR0=<*> PSR1=<*> PRXF=<*> PIXF=<*>",
+      "regex": "^Error\\ receiving\\ packet\\ on\\ tree\\ network,\\ expecting\\ type\\ (.*?)\\ instead\\ of\\ type\\ (.*?)\\ \\(softheader=(.*?)\\ (.*?)\\ (.*?)\\ (.*?)\\)\\ PSR0=(.*?)\\ PSR1=(.*?)\\ PRXF=(.*?)\\ PIXF=(.*?)$",
+      "n_tokens": 21,
+      "wildcard_count": 10,
+      "literal_len": 113
+    },
+    {
+      "event_id": "E61",
+      "event_template": "exception syndrome register: <*>",
+      "regex": "^exception\\ syndrome\\ register:\\ (.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 29
+    },
+    {
+      "event_id": "E62",
+      "event_template": "floating point instr. enabled.....<*>",
+      "regex": "^floating\\ point\\ instr\\.\\ enabled\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E63",
+      "event_template": "floating pt ex mode <*> enable......<*>",
+      "regex": "^floating\\ pt\\ ex\\ mode\\ (.*?)\\ enable\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 6,
+      "wildcard_count": 2,
+      "literal_len": 33
+    },
+    {
+      "event_id": "E64",
+      "event_template": "force load/store alignment...............<*>",
+      "regex": "^force\\ load/store\\ alignment\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E65",
+      "event_template": "fpr29=<*>",
+      "regex": "^fpr29=(.*?)$",
+      "n_tokens": 1,
+      "wildcard_count": 1,
+      "literal_len": 6
+    },
+    {
+      "event_id": "E66",
+      "event_template": "fraction rounded.........................<*>",
+      "regex": "^fraction\\ rounded\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 2,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E67",
+      "event_template": "generating core.<*>",
+      "regex": "^generating\\ core\\.(.*?)$",
+      "n_tokens": 2,
+      "wildcard_count": 1,
+      "literal_len": 16
+    },
+    {
+      "event_id": "E68",
+      "event_template": "guaranteed data cache block touch........<*>",
+      "regex": "^guaranteed\\ data\\ cache\\ block\\ touch\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 5,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E69",
+      "event_template": "guaranteed instruction cache block touch.<*>",
+      "regex": "^guaranteed\\ instruction\\ cache\\ block\\ touch\\.(.*?)$",
+      "n_tokens": 5,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E70",
+      "event_template": "iar <*> dear <*>",
+      "regex": "^iar\\ (.*?)\\ dear\\ (.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 2,
+      "literal_len": 10
+    },
+    {
+      "event_id": "E71",
+      "event_template": "icache prefetch depth....................<*>",
+      "regex": "^icache\\ prefetch\\ depth\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E72",
+      "event_template": "icache prefetch threshold................<*>",
+      "regex": "^icache\\ prefetch\\ threshold\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E73",
+      "event_template": "Ido chip status changed: <*> ip=<*> v=<*> t=<*> status=M <*>",
+      "regex": "^Ido\\ chip\\ status\\ changed:\\ (.*?)\\ ip=(.*?)\\ v=(.*?)\\ t=(.*?)\\ status=M\\ (.*?)$",
+      "n_tokens": 10,
+      "wildcard_count": 5,
+      "literal_len": 45
+    },
+    {
+      "event_id": "E74",
+      "event_template": "idoproxydb hit ASSERT condition: ASSERT expression=0 Source file=idotransportmgr.cpp Source line=<*> Function=int IdoTransportMgr::SendPacket(IdoUdpMgr*, BglCtlPavTrace*)",
+      "regex": "^idoproxydb\\ hit\\ ASSERT\\ condition:\\ ASSERT\\ expression=0\\ Source\\ file=idotransportmgr\\.cpp\\ Source\\ line=(.*?)\\ Function=int\\ IdoTransportMgr::SendPacket\\(IdoUdpMgr\\*,\\ BglCtlPavTrace\\*\\)$",
+      "n_tokens": 13,
+      "wildcard_count": 1,
+      "literal_len": 167
+    },
+    {
+      "event_id": "E75",
+      "event_template": "instruction address space.........<*>",
+      "regex": "^instruction\\ address\\ space\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E76",
+      "event_template": "instruction address: <*>",
+      "regex": "^instruction\\ address:\\ (.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 21
+    },
+    {
+      "event_id": "E77",
+      "event_template": "instruction cache parity error corrected",
+      "regex": "^instruction\\ cache\\ parity\\ error\\ corrected$",
+      "n_tokens": 5,
+      "wildcard_count": 0,
+      "literal_len": 40
+    },
+    {
+      "event_id": "E78",
+      "event_template": "Kernel detected <*> integer alignment exceptions (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*> (<*>) iar <*>, dear <*>",
+      "regex": "^Kernel\\ detected\\ (.*?)\\ integer\\ alignment\\ exceptions\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)\\ \\((.*?)\\)\\ iar\\ (.*?),\\ dear\\ (.*?)$",
+      "n_tokens": 46,
+      "wildcard_count": 25,
+      "literal_len": 165
+    },
+    {
+      "event_id": "E79",
+      "event_template": "lr:<*> cr:<*> xer:<*> ctr:<*>",
+      "regex": "^lr:(.*?)\\ cr:(.*?)\\ xer:(.*?)\\ ctr:(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 4,
+      "literal_len": 17
+    },
+    {
+      "event_id": "E80",
+      "event_template": "Lustre mount FAILED : bglio<*> : block_id : location",
+      "regex": "^Lustre\\ mount\\ FAILED\\ :\\ bglio(.*?)\\ :\\ block_id\\ :\\ location$",
+      "n_tokens": 9,
+      "wildcard_count": 1,
+      "literal_len": 49
+    },
+    {
+      "event_id": "E81",
+      "event_template": "Lustre mount FAILED : bglio<*> : point <*>",
+      "regex": "^Lustre\\ mount\\ FAILED\\ :\\ bglio(.*?)\\ :\\ point\\ (.*?)$",
+      "n_tokens": 8,
+      "wildcard_count": 2,
+      "literal_len": 36
+    },
+    {
+      "event_id": "E82",
+      "event_template": "MACHINE CHECK DCR read timeout (mc=<*> iar <*> lr <*>)",
+      "regex": "^MACHINE\\ CHECK\\ DCR\\ read\\ timeout\\ \\(mc=(.*?)\\ iar\\ (.*?)\\ lr\\ (.*?)\\)$",
+      "n_tokens": 10,
+      "wildcard_count": 3,
+      "literal_len": 45
+    },
+    {
+      "event_id": "E83",
+      "event_template": "machine check enable..............<*>",
+      "regex": "^machine\\ check\\ enable\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E84",
+      "event_template": "machine check: i-fetch......................<*>",
+      "regex": "^machine\\ check:\\ i\\-fetch\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E85",
+      "event_template": "machine state register: <*>",
+      "regex": "^machine\\ state\\ register:\\ (.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 24
+    },
+    {
+      "event_id": "E86",
+      "event_template": "Machine State Register: <*>",
+      "regex": "^Machine\\ State\\ Register:\\ (.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 24
+    },
+    {
+      "event_id": "E87",
+      "event_template": "minus normalized number..................<*>",
+      "regex": "^minus\\ normalized\\ number\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 41
+    },
+    {
+      "event_id": "E88",
+      "event_template": "New ido chip inserted into the database: <*> ip=<*> v=<*> t=<*>",
+      "regex": "^New\\ ido\\ chip\\ inserted\\ into\\ the\\ database:\\ (.*?)\\ ip=(.*?)\\ v=(.*?)\\ t=(.*?)$",
+      "n_tokens": 11,
+      "wildcard_count": 4,
+      "literal_len": 51
+    },
+    {
+      "event_id": "E89",
+      "event_template": "NFS Mount failed on bglio<*>, slept <*> seconds, retrying (<*>)",
+      "regex": "^NFS\\ Mount\\ failed\\ on\\ bglio(.*?),\\ slept\\ (.*?)\\ seconds,\\ retrying\\ \\((.*?)\\)$",
+      "n_tokens": 10,
+      "wildcard_count": 3,
+      "literal_len": 54
+    },
+    {
+      "event_id": "E90",
+      "event_template": "Node card is not fully functional",
+      "regex": "^Node\\ card\\ is\\ not\\ fully\\ functional$",
+      "n_tokens": 6,
+      "wildcard_count": 0,
+      "literal_len": 33
+    },
+    {
+      "event_id": "E91",
+      "event_template": "Node card status: ALERT <*>, ALERT <*>, ALERT <*>, ALERT <*> is (are) active. Clock Mode is Low. Clock Select is Midplane. Phy JTAG Reset is asserted. ASIC JTAG Reset is not asserted. Temperature Mask is not active. No temperature error. Temperature Limit Error Latch is clear. PGOOD is asserted. PGOOD error latch is clear. MPGOOD is OK. MPGOOD error latch is clear. The <*>.<*> volt rail is OK. The <*>.<*> volt rail is OK.",
+      "regex": "^Node\\ card\\ status:\\ ALERT\\ (.*?),\\ ALERT\\ (.*?),\\ ALERT\\ (.*?),\\ ALERT\\ (.*?)\\ is\\ \\(are\\)\\ active\\.\\ Clock\\ Mode\\ is\\ Low\\.\\ Clock\\ Select\\ is\\ Midplane\\.\\ Phy\\ JTAG\\ Reset\\ is\\ asserted\\.\\ ASIC\\ JTAG\\ Reset\\ is\\ not\\ asserted\\.\\ Temperature\\ Mask\\ is\\ not\\ active\\.\\ No\\ temperature\\ error\\.\\ Temperature\\ Limit\\ Error\\ Latch\\ is\\ clear\\.\\ PGOOD\\ is\\ asserted\\.\\ PGOOD\\ error\\ latch\\ is\\ clear\\.\\ MPGOOD\\ is\\ OK\\.\\ MPGOOD\\ error\\ latch\\ is\\ clear\\.\\ The\\ (.*?)\\.(.*?)\\ volt\\ rail\\ is\\ OK\\.\\ The\\ (.*?)\\.(.*?)\\ volt\\ rail\\ is\\ OK\\.$",
+      "n_tokens": 75,
+      "wildcard_count": 8,
+      "literal_len": 401
+    },
+    {
+      "event_id": "E92",
+      "event_template": "Node card status: no ALERTs are active. Clock Mode is Low. Clock Select is Midplane. Phy JTAG Reset is asserted. ASIC JTAG Reset is asserted. Temperature Mask is not active. No temperature error. Temperature Limit Error Latch is clear. PGOOD IS NOT ASSERTED. PGOOD ERROR LATCH IS ACTIVE. MPGOOD IS NOT OK. MPGOOD ERROR LATCH IS ACTIVE. The <*>.<*> volt rail is OK. The <*>.<*> volt rail is OK.",
+      "regex": "^Node\\ card\\ status:\\ no\\ ALERTs\\ are\\ active\\.\\ Clock\\ Mode\\ is\\ Low\\.\\ Clock\\ Select\\ is\\ Midplane\\.\\ Phy\\ JTAG\\ Reset\\ is\\ asserted\\.\\ ASIC\\ JTAG\\ Reset\\ is\\ asserted\\.\\ Temperature\\ Mask\\ is\\ not\\ active\\.\\ No\\ temperature\\ error\\.\\ Temperature\\ Limit\\ Error\\ Latch\\ is\\ clear\\.\\ PGOOD\\ IS\\ NOT\\ ASSERTED\\.\\ PGOOD\\ ERROR\\ LATCH\\ IS\\ ACTIVE\\.\\ MPGOOD\\ IS\\ NOT\\ OK\\.\\ MPGOOD\\ ERROR\\ LATCH\\ IS\\ ACTIVE\\.\\ The\\ (.*?)\\.(.*?)\\ volt\\ rail\\ is\\ OK\\.\\ The\\ (.*?)\\.(.*?)\\ volt\\ rail\\ is\\ OK\\.$",
+      "n_tokens": 69,
+      "wildcard_count": 4,
+      "literal_len": 381
+    },
+    {
+      "event_id": "E93",
+      "event_template": "Node card VPD check: U<*> node in processor card slot J<*> do not match. VPD ecid <*>, found <*>",
+      "regex": "^Node\\ card\\ VPD\\ check:\\ U(.*?)\\ node\\ in\\ processor\\ card\\ slot\\ J(.*?)\\ do\\ not\\ match\\.\\ VPD\\ ecid\\ (.*?),\\ found\\ (.*?)$",
+      "n_tokens": 19,
+      "wildcard_count": 4,
+      "literal_len": 84
+    },
+    {
+      "event_id": "E94",
+      "event_template": "NodeCard is not fully functional",
+      "regex": "^NodeCard\\ is\\ not\\ fully\\ functional$",
+      "n_tokens": 5,
+      "wildcard_count": 0,
+      "literal_len": 32
+    },
+    {
+      "event_id": "E95",
+      "event_template": "PrepareForService shutting down Node card(mLctn(<*>), mCardSernum(<*>), mLp(<*>), mIp(<*>), mType(<*>)) as part of Service Action <*>",
+      "regex": "^PrepareForService\\ shutting\\ down\\ Node\\ card\\(mLctn\\((.*?)\\),\\ mCardSernum\\((.*?)\\),\\ mLp\\((.*?)\\),\\ mIp\\((.*?)\\),\\ mType\\((.*?)\\)\\)\\ as\\ part\\ of\\ Service\\ Action\\ (.*?)$",
+      "n_tokens": 15,
+      "wildcard_count": 6,
+      "literal_len": 115
+    },
+    {
+      "event_id": "E96",
+      "event_template": "PrepareForService shutting down NodeCard(mLctn(<*>), mCardSernum(<*>), mLp(<*>), mIp(<*>), mType(<*>)) as part of Service Action <*>",
+      "regex": "^PrepareForService\\ shutting\\ down\\ NodeCard\\(mLctn\\((.*?)\\),\\ mCardSernum\\((.*?)\\),\\ mLp\\((.*?)\\),\\ mIp\\((.*?)\\),\\ mType\\((.*?)\\)\\)\\ as\\ part\\ of\\ Service\\ Action\\ (.*?)$",
+      "n_tokens": 14,
+      "wildcard_count": 6,
+      "literal_len": 114
+    },
+    {
+      "event_id": "E97",
+      "event_template": "problem state (<*>=sup,<*>=usr).......<*>",
+      "regex": "^problem\\ state\\ \\((.*?)=sup,(.*?)=usr\\)\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 3,
+      "literal_len": 32
+    },
+    {
+      "event_id": "E98",
+      "event_template": "program interrupt",
+      "regex": "^program\\ interrupt$",
+      "n_tokens": 2,
+      "wildcard_count": 0,
+      "literal_len": 17
+    },
+    {
+      "event_id": "E99",
+      "event_template": "program interrupt: fp cr field .............<*>",
+      "regex": "^program\\ interrupt:\\ fp\\ cr\\ field\\ \\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 6,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E100",
+      "event_template": "program interrupt: fp cr update.............<*>",
+      "regex": "^program\\ interrupt:\\ fp\\ cr\\ update\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 5,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E101",
+      "event_template": "program interrupt: illegal instruction......<*>",
+      "regex": "^program\\ interrupt:\\ illegal\\ instruction\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E102",
+      "event_template": "program interrupt: imprecise exception......<*>",
+      "regex": "^program\\ interrupt:\\ imprecise\\ exception\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E103",
+      "event_template": "program interrupt: privileged instruction...<*>",
+      "regex": "^program\\ interrupt:\\ privileged\\ instruction\\.\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E104",
+      "event_template": "program interrupt: trap instruction.........<*>",
+      "regex": "^program\\ interrupt:\\ trap\\ instruction\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E105",
+      "event_template": "program interrupt: unimplemented operation..<*>",
+      "regex": "^program\\ interrupt:\\ unimplemented\\ operation\\.\\.(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E106",
+      "event_template": "r24=<*> r25=<*> r26=<*> r27=<*>",
+      "regex": "^r24=(.*?)\\ r25=(.*?)\\ r26=(.*?)\\ r27=(.*?)$",
+      "n_tokens": 4,
+      "wildcard_count": 4,
+      "literal_len": 19
+    },
+    {
+      "event_id": "E107",
+      "event_template": "rts internal error",
+      "regex": "^rts\\ internal\\ error$",
+      "n_tokens": 3,
+      "wildcard_count": 0,
+      "literal_len": 18
+    },
+    {
+      "event_id": "E108",
+      "event_template": "rts panic! - stopping execution",
+      "regex": "^rts\\ panic!\\ \\-\\ stopping\\ execution$",
+      "n_tokens": 5,
+      "wildcard_count": 0,
+      "literal_len": 31
+    },
+    {
+      "event_id": "E109",
+      "event_template": "rts tree/torus link training failed: wanted: <*> got: <*>",
+      "regex": "^rts\\ tree/torus\\ link\\ training\\ failed:\\ wanted:\\ (.*?)\\ got:\\ (.*?)$",
+      "n_tokens": 9,
+      "wildcard_count": 2,
+      "literal_len": 51
+    },
+    {
+      "event_id": "E110",
+      "event_template": "rts: bad message header: expecting type <*> instead of type <*> (softheader=<*> <*> <*> <*>) PSR0=<*> PSR1=<*> PRXF=<*> PIXF=<*>",
+      "regex": "^rts:\\ bad\\ message\\ header:\\ expecting\\ type\\ (.*?)\\ instead\\ of\\ type\\ (.*?)\\ \\(softheader=(.*?)\\ (.*?)\\ (.*?)\\ (.*?)\\)\\ PSR0=(.*?)\\ PSR1=(.*?)\\ PRXF=(.*?)\\ PIXF=(.*?)$",
+      "n_tokens": 19,
+      "wildcard_count": 10,
+      "literal_len": 98
+    },
+    {
+      "event_id": "E111",
+      "event_template": "rts: kernel terminated for reason <*>",
+      "regex": "^rts:\\ kernel\\ terminated\\ for\\ reason\\ (.*?)$",
+      "n_tokens": 6,
+      "wildcard_count": 1,
+      "literal_len": 34
+    },
+    {
+      "event_id": "E112",
+      "event_template": "rts: kernel terminated for reason <*>: bad message header: invalid cpu, type=<*>, cpu=<*>, index=<*>, total=<*>",
+      "regex": "^rts:\\ kernel\\ terminated\\ for\\ reason\\ (.*?):\\ bad\\ message\\ header:\\ invalid\\ cpu,\\ type=(.*?),\\ cpu=(.*?),\\ index=(.*?),\\ total=(.*?)$",
+      "n_tokens": 15,
+      "wildcard_count": 5,
+      "literal_len": 96
+    },
+    {
+      "event_id": "E113",
+      "event_template": "shutdown complete",
+      "regex": "^shutdown\\ complete$",
+      "n_tokens": 2,
+      "wildcard_count": 0,
+      "literal_len": 17
+    },
+    {
+      "event_id": "E114",
+      "event_template": "size of scratchpad portion of L3.........<*> (<*>)",
+      "regex": "^size\\ of\\ scratchpad\\ portion\\ of\\ L3\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)\\ \\((.*?)\\)$",
+      "n_tokens": 7,
+      "wildcard_count": 2,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E115",
+      "event_template": "special purpose registers:",
+      "regex": "^special\\ purpose\\ registers:$",
+      "n_tokens": 3,
+      "wildcard_count": 0,
+      "literal_len": 26
+    },
+    {
+      "event_id": "E116",
+      "event_template": "store operation.............................<*>",
+      "regex": "^store\\ operation\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 2,
+      "wildcard_count": 1,
+      "literal_len": 44
+    },
+    {
+      "event_id": "E117",
+      "event_template": "suppressing further interrupts of same type",
+      "regex": "^suppressing\\ further\\ interrupts\\ of\\ same\\ type$",
+      "n_tokens": 6,
+      "wildcard_count": 0,
+      "literal_len": 43
+    },
+    {
+      "event_id": "E118",
+      "event_template": "total of <*> ddr error(s) detected and corrected",
+      "regex": "^total\\ of\\ (.*?)\\ ddr\\ error\\(s\\)\\ detected\\ and\\ corrected$",
+      "n_tokens": 8,
+      "wildcard_count": 1,
+      "literal_len": 45
+    },
+    {
+      "event_id": "E119",
+      "event_template": "total of <*> ddr error(s) detected and corrected over <*> seconds",
+      "regex": "^total\\ of\\ (.*?)\\ ddr\\ error\\(s\\)\\ detected\\ and\\ corrected\\ over\\ (.*?)\\ seconds$",
+      "n_tokens": 11,
+      "wildcard_count": 2,
+      "literal_len": 59
+    },
+    {
+      "event_id": "E120",
+      "event_template": "wait state enable.................<*>",
+      "regex": "^wait\\ state\\ enable\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.\\.(.*?)$",
+      "n_tokens": 3,
+      "wildcard_count": 1,
+      "literal_len": 34
+    }
+  ]
+}
