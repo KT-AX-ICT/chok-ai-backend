@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,13 +26,14 @@ class Settings(BaseSettings):
     cors_max_age: int = 3600
 
     # ── LLM ─────────────────────────────────────
-    # ANTHROPIC_API_KEY는 prefix 없이 표준 이름 그대로 읽음
+    # OPENAI_API_KEY는 prefix 없이 표준 이름 그대로 읽음
     # (validation_alias가 env_prefix를 무시함)
-    anthropic_api_key: str = Field(
-        default="",
-        validation_alias="ANTHROPIC_API_KEY",
+    openai_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        validation_alias="OPENAI_API_KEY",
     )
-    llm_model: str = "claude-haiku-4-5-20251001"
+    # 모델은 CHOK_AI_LLM_MODEL 로 override 가능
+    llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.2
     llm_max_tokens: int = 1024
     
