@@ -24,7 +24,7 @@
 
 - **Base URL**: `/ai/v1`
 - **Content-Type**: `application/json`
-- **시각 표기**: 모든 시각 문자열은 `yyyy-MM-dd HH:mm:ss` 형식 (요청 `logTs`, 응답 `analyzedAt`)
+- **시각 표기**: 모든 시각 문자열은 `yyyy-MM-dd HH:mm:ss` 형식 (요청 `occurredAt`, 응답 `analyzedAt`)
 - **인증**: 미정(보류) — 추후 결정
 
 ---
@@ -107,7 +107,7 @@ flowchart TB
   "nodeRepeat": "string",
   "component": "string",
   "logType": "string",
-  "logTs": "string",
+  "occurredAt": "string",
   "logLevel": "string",
   "content": "string",
   "domain": "string"
@@ -121,7 +121,7 @@ flowchart TB
 | nodeRepeat | str | 노드 반복 정보 |
 | component | str | 컴포넌트 |
 | logType | str | 로그 타입 |
-| logTs | str | 로그 타임스탬프 (`yyyy-MM-dd HH:mm:ss` 형식 문자열) |
+| occurredAt | str | 로그 발생 시각 (`yyyy-MM-dd HH:mm:ss` 형식 문자열) |
 | logLevel | str | 로그 레벨 |
 | content | str | 로그 내용 |
 | domain | str | 도메인 — **BGL 고정값** (요청 입력, 응답 미포함) |
@@ -181,7 +181,7 @@ flowchart TB
       "nodeRepeat": "string",
       "component": "string",
       "logType": "string",
-      "logTs": "string",
+      "occurredAt": "string",
       "logLevel": "string",
       "content": "string",
       "domain": "string"

@@ -78,7 +78,7 @@ class ProcessStatus(str, Enum):   # 배치 항목의 "처리 완료 여부" (이
 1차 필터(FATAL)를 거친 로그의 식별자·메타·원문. `label`·`eventId`는 **받지 않는다**([API.md 5.1](API.md)).
 
 **설계 방침 — 변환·파싱하지 않는다.** 요청 값은 거의 그대로 Tool/LLM으로 전달되므로 모델은 *통과형*으로 둔다.
-- 모든 메타·원문 필드는 **문자열 그대로** 보관한다. `logTs`도 `datetime`으로 파싱하지 않는다.
+- 모든 메타·원문 필드는 **문자열 그대로** 보관한다. `occurredAt`도 `datetime`으로 파싱하지 않는다.
 - 타입 강제 변환·범위 제약 등 부가 검증은 두지 않고, FastAPI가 **요청 형태(필드 존재·기본 타입)만 검증**하게 한다.
 - 그럼에도 모델을 두는 이유: ① FastAPI의 **OpenAPI 계약** 자동 생성(Spring 연동), ② Tool들이 **필드를 이름으로 접근**(Tool④ `node`, Tool② `log_level`/`content` 등).
 
@@ -93,7 +93,7 @@ class LogAnalyzeRequest(CamelModel):
     node_repeat: str
     component: str
     log_type: str
-    log_ts: str        # "yyyy-MM-dd HH:mm:ss" 문자열 — datetime 파싱하지 않음
+    occurred_at: str   # "yyyy-MM-dd HH:mm:ss" 문자열 — datetime 파싱하지 않음
     log_level: str
     content: str
     domain: str        # BGL 고정값 (요청 입력, 응답에는 없음)
@@ -106,7 +106,7 @@ class LogAnalyzeRequest(CamelModel):
 | node_repeat | nodeRepeat | str | ✔ | 노드 반복 정보 |
 | component | component | str | ✔ | 컴포넌트 |
 | log_type | logType | str | ✔ | 로그 타입 |
-| log_ts | logTs | str | ✔ | 로그 타임스탬프 — `yyyy-MM-dd HH:mm:ss` 형식 문자열 (파싱 없이 그대로 수신) |
+| occurred_at | occurredAt | str | ✔ | 로그 발생 시각 — `yyyy-MM-dd HH:mm:ss` 형식 문자열 (파싱 없이 그대로 수신) |
 | log_level | logLevel | str | ✔ | 로그 레벨 |
 | content | content | str | ✔ | 로그 내용 |
 | domain | domain | str | ✔ | 도메인 — **BGL 고정값** (요청 입력, 응답 미포함) |
@@ -325,4 +325,4 @@ class LLMError(AppError):          # 호출 실패 + 구조화 출력 파싱 실
 - **고정 값 타입 확장:** `logLevel`·`logType` 값 집합이 확정되면 `RiskLevel`처럼 `Literal`(또는 Enum)로 좁힌다.
 - **clusterId 미할당:** 클러스터가 없을 때의 표현(`null` 허용 vs `-1`/`0` 센티넬)을 Tool ③ 정책 확정 후 결정한다.
 - **에러 코드 카탈로그:** 현재 표는 시작점이다. 이벤트 템플릿 매칭 실패, 내부 정의 문서 로드 실패(`CONFIG_ERROR` 등) 등 도메인 오류가 정해지면 코드·상태를 추가한다.
-- **logTs 타입:** 현재 원문 문자열 수신. 포맷이 표준화되면 `datetime` 파싱으로 승격을 검토한다.
+- **occurredAt 타입:** 현재 원문 문자열 수신. 포맷이 표준화되면 `datetime` 파싱으로 승격을 검토한다.
