@@ -84,7 +84,7 @@ async def run_diagnosis(
     """이상 로그 한 건의 summary / analysis / action 생성."""
     user_prompt = USER_PROMPT_TEMPLATE.format(
         log_id=log.log_id,
-        log_ts=log.log_ts,        # 통과형 문자열
+        occurred_at=log.occurred_at,        # 통과형 문자열
         node=log.node,
         component=log.component,
         log_type=log.log_type,
@@ -116,7 +116,7 @@ async def run_normal_reason(
     """정상 로그(FATAL→정상) 한 건의 정상 사유 summary / analysis 생성."""
     user_prompt = NORMAL_USER_PROMPT_TEMPLATE.format(
         log_id=log.log_id,
-        log_ts=log.log_ts,
+        occurred_at=log.occurred_at,
         node=log.node,
         component=log.component,
         log_type=log.log_type,

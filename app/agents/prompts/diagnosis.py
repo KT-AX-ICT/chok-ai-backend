@@ -31,7 +31,7 @@ SYSTEM_PROMPT = """당신은 BGL(Blue Gene/L) HPC 시스템 로그 분석 전문
 
 USER_PROMPT_TEMPLATE = """[로그 정보]
 - log_id: {log_id}
-- 발생 시각: {log_ts}
+- 발생 시각: {occurred_at}
 - 노드: {node}
 - 컴포넌트: {component}
 - 로그 타입: {log_type}
@@ -71,7 +71,7 @@ NORMAL_SYSTEM_PROMPT = """당신은 BGL(Blue Gene/L) HPC 시스템 로그 분석
 
 NORMAL_USER_PROMPT_TEMPLATE = """[로그 정보]
 - log_id: {log_id}
-- 발생 시각: {log_ts}
+- 발생 시각: {occurred_at}
 - 노드: {node}
 - 컴포넌트: {component}
 - 로그 타입: {log_type}

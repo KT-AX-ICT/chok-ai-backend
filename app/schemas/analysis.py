@@ -67,7 +67,7 @@ class AnalyzeRequest(CamelModel):
     component: str = Field(..., examples=["APP"])
     log_type: str = Field(..., examples=["RAS"])
     # "yyyy-MM-dd HH:mm:ss" 문자열 — datetime 파싱하지 않음 (통과형)
-    log_ts: str = Field(..., examples=["2005-06-04 00:24:32"])
+    occurred_at: str = Field(..., examples=["2005-06-04 00:24:32"])
     log_level: str = Field(..., examples=["FATAL"])
     content: str = Field(
         ...,
@@ -107,11 +107,11 @@ class AnalyzeResult(CamelModel):
 # ──────────────────────────────────────────────
 
 class AnalyzeResponse(CamelModel):
-    """단건 응답 — 처리 실패는 에러 응답(ErrorResponse)으로 떨어지므로 항상 status·result 존재."""
+    """단건 응답 — 처리 실패는 에러 응답(ErrorResponse)으로 떨어지므로 항상 is_abnormal·result 존재."""
 
     log_id: int
     event_id: str                            # Tool①
-    status: LogStatus                        # Tool② (정상/이상)
+    is_abnormal: bool                        # 이상=True / 정상=False (응답 전용; 내부 status에서 변환)
     result: AnalyzeResult                    # 항상 포함 (정상이면 일부 필드 빈값)
     processing_time_ms: int = Field(..., ge=0)
 
@@ -127,7 +127,7 @@ class BatchItemResult(CamelModel):
     log_id: int
     event_id: str | None = None              # Tool① 산출. 처리 실패 시 null
     process_status: ProcessStatus            # 처리 완료 여부 (success/fail)
-    status: LogStatus | None = None          # 로그 판정 (정상/이상). 처리 실패 시 null
+    is_abnormal: bool | None = None          # 이상=True / 정상=False. 처리 실패 시 null
     result: AnalyzeResult | None = None      # 성공 시 채움. 처리 실패 시 null
     error: str | None = None                 # 처리 실패 시 사유
 
@@ -137,8 +137,8 @@ class BatchItemResult(CamelModel):
             if self.error is None:
                 raise ValueError("fail 항목은 error가 필요합니다")
         else:  # success
-            if self.status is None:
-                raise ValueError("success 항목은 status(정상/이상)가 필요합니다")
+            if self.is_abnormal is None:
+                raise ValueError("success 항목은 is_abnormal이 필요합니다")
             if self.result is None:
                 raise ValueError("success 항목은 result가 필요합니다")
         return self

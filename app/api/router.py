@@ -42,7 +42,7 @@ async def analyze_single(request: AnalyzeRequest) -> AnalyzeResponse:
     return AnalyzeResponse(
         log_id=request.log_id,
         event_id=event_id,
-        status=status,
+        is_abnormal=(status == "이상"),   # 응답 경계에서 변환 (내부 status 유지)
         result=result,
         processing_time_ms=elapsed_ms,
     )

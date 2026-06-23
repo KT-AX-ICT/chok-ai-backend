@@ -98,7 +98,7 @@ async def _safe_analyze(log: AnalyzeRequest) -> BatchItemResult:
             log_id=log.log_id,
             event_id=event_id,
             process_status=ProcessStatus.SUCCESS,
-            status=status,
+            is_abnormal=(status == "이상"),   # 응답 경계에서 변환
             result=result,
         )
     except Exception as e:

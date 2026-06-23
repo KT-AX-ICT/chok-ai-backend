@@ -29,7 +29,7 @@ def make_log(log_id: int = 10293, log_level: str = "FATAL") -> dict:
         "nodeRepeat": "R04-M1-N4",
         "component": "APP",
         "logType": "RAS",
-        "logTs": "2005-06-04 00:24:32",
+        "occurredAt": "2005-06-04 00:24:32",
         "logLevel": log_level,
         "content": "ciod: failed to read message prefix on control stream",
     }
@@ -64,7 +64,7 @@ def test_analyze_abnormal_success(monkeypatch) -> None:
     # 최상위 camelCase 계약
     assert body["logId"] == 10293
     assert body["eventId"]  # Tool① stub
-    assert body["status"] == "이상"
+    assert body["isAbnormal"] is True
     assert isinstance(body["processingTimeMs"], int)
 
     result = body["result"]
@@ -91,7 +91,7 @@ def test_analyze_normal_path(monkeypatch) -> None:
     assert r.status_code == 200
     body = r.json()
 
-    assert body["status"] == "정상"
+    assert body["isAbnormal"] is False
     result = body["result"]
     assert result["riskLevel"] is None             # 정상 → null
     assert result["clusterId"] is None             # 정상 → null
@@ -154,7 +154,7 @@ def test_batch_partial_failure(monkeypatch) -> None:
     by_id = {item["logId"]: item for item in body["results"]}
 
     assert by_id[1]["processStatus"] == "success"
-    assert by_id[1]["status"] == "이상"
+    assert by_id[1]["isAbnormal"] is True
     assert by_id[1]["result"] is not None
 
     assert by_id[2]["processStatus"] == "fail"
