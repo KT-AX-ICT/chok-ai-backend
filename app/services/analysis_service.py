@@ -51,7 +51,6 @@ async def analyze_single_log(
     if status == "정상":
         normal = await run_normal_reason(log, event_id)
         result = AnalyzeResult(
-            domain="",
             risk_level=None,
             summary=normal["summary"],
             analysis=normal["analysis"],
@@ -70,7 +69,6 @@ async def analyze_single_log(
     )
     llm = await run_diagnosis(log, risk_level, cluster_id, event_id, node_ctx)
     result = AnalyzeResult(
-        domain="BGL",
         risk_level=risk_level,
         summary=llm["summary"],
         analysis=llm["analysis"],

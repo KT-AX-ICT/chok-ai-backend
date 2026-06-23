@@ -73,6 +73,7 @@ class AnalyzeRequest(CamelModel):
         ...,
         examples=["ciod: failed to read message prefix on control stream"],
     )
+    domain: str = Field(..., examples=["BGL"])  # 요청에만 포함 (API.md 기준)
 
 
 class BatchAnalyzeRequest(CamelModel):
@@ -88,8 +89,6 @@ class BatchAnalyzeRequest(CamelModel):
 
 class AnalyzeResult(CamelModel):
     """분석 결과 본문 (log_analysis 한 행에 매핑)."""
-
-    domain: str                                          # 이상: 도메인 / 정상: ""
     risk_level: RiskLevel | None = None                  # 이상: 위험도 / 정상: null
     summary: str                                         # 공통 — 정상이면 정상 사유
     analysis: str                                        # 공통 — 정상이면 정상 사유

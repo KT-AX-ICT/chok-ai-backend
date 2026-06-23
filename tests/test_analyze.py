@@ -30,6 +30,7 @@ def make_log(log_id: int = 10293, log_level: str = "FATAL") -> dict:
         "component": "APP",
         "logType": "RAS",
         "occurredAt": "2005-06-04 00:24:32",
+        "domain": "BGL",
         "logLevel": log_level,
         "content": "ciod: failed to read message prefix on control stream",
     }
@@ -68,7 +69,6 @@ def test_analyze_abnormal_success(monkeypatch) -> None:
     assert isinstance(body["processingTimeMs"], int)
 
     result = body["result"]
-    assert result["domain"] == "BGL"
     assert result["riskLevel"] == "긴급"          # FATAL → Tool② stub
     assert result["summary"] == "요약"
     assert result["action"] == "대응"
@@ -95,7 +95,6 @@ def test_analyze_normal_path(monkeypatch) -> None:
     result = body["result"]
     assert result["riskLevel"] is None             # 정상 → null
     assert result["clusterId"] is None             # 정상 → null
-    assert result["domain"] == ""                  # 정상 → ""
     assert result["action"] == ""                  # 정상 → ""
     assert result["summary"] == "정상 사유 요약"
     assert TS_RE.match(result["analyzedAt"])
