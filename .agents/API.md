@@ -33,7 +33,7 @@
 
 | 결정 | 내용 | 비고 |
 |------|------|------|
-| **이상 여부 내부 판단** | 1차 필터(FATAL)만 거친 로그를 받으므로, 정상/이상 판정을 AI 파이프라인 안에서 직접 수행 | 결과는 응답 `status` 불리언 (**이상=`true`/정상=`false`**, Spring DB 정의). 정상이면 `result`에 `summary`·`analysis`(정상 사유)만 채움 |
+| **이상 여부 내부 판단** | 1차 필터(FATAL)만 거친 로그를 받으므로, 정상/이상 판정을 AI 파이프라인 안에서 직접 수행 | 결과는 응답 `isAbnormal` 불리언 (**이상=`true`/정상=`false`**, Spring DB 정의). 정상이면 `result`에 `summary`·`analysis`(정상 사유)만 채움 |
 | **ChromaDB 미사용** | 벡터 DB 검색(RAG) 대신, **내부 정의 문서를 그대로 참조**하여 Tool이 분류·정보를 전달 | 운영 의존성 축소 |
 | **Tool 4개 + 실행 순서** | ①(템플릿)→②(이상 여부·긴급도) 후, **②가 이상이면** ③(클러스터)·④(Node 정보)를 수행 (아래 4·5장) | ②가 정상으로 판정하면 ③④ 생략하고 LLM 직행 |
 | **요청 필드 정리** | 요청에서 `label`·`eventId` 제거 (1차 필터 후 식별자/메타/내용만 전달) | 6장 스키마 반영 |
@@ -49,7 +49,7 @@ flowchart TB
     REQ["요청 로그<br/>(FATAL · 1차 필터링됨)"]
 
     T1["① 이벤트 템플릿 분류<br/>→ eventId"]
-    T2["② 이상 여부 판단 + 긴급도 분류<br/>→ status(이상=true/정상=false) / riskLevel"]
+    T2["② 이상 여부 판단 + 긴급도 분류<br/>→ isAbnormal(이상=true/정상=false) / riskLevel"]
     T3["③ 클러스터(패턴) 분류<br/>→ clusterId"]
     T4["④ Node별 정보 조회·전달<br/>→ node 컨텍스트"]
 
@@ -68,10 +68,10 @@ flowchart TB
 ```
 
 1. 요청 로그를 **① 이벤트 템플릿 분류** Tool에 전달해 `eventId`를 확보한다. (선행 필수)
-2. **② 이상 여부 판단 + 긴급도 분류**가 ① 결과를 기반으로 `status`(이상 여부: 이상=`true`/정상=`false`)·`riskLevel`을 산출한다. **여기서 분기한다.**
+2. **② 이상 여부 판단 + 긴급도 분류**가 ① 결과를 기반으로 `isAbnormal`(이상 여부: 이상=`true`/정상=`false`)·`riskLevel`을 산출한다. **여기서 분기한다.**
 3. ②가 **정상(`false`)** 으로 판정하면 ③④를 건너뛰고 **바로 LLM 분석**으로 이어져 정상 사유(`summary`·`analysis`)만 작성한다.
 4. ②가 **이상(`true`)** 이면 **③(클러스터)·④(Node 정보 조회)** 를 수행한 뒤 LLM 분석에 합류하여 `result`의 모든 필드(위험도·요약·분석·대응·클러스터)를 채운다. (정상 경로는 `action`=`""`, `riskLevel`·`clusterId`=`null`)
-5. 결과를 응답 스키마로 매핑하여 `status`(이상 여부)·`result`(`eventId` 포함, 정상·이상 모두)를 반환한다.
+5. 결과를 응답 스키마로 매핑하여 `isAbnormal`(이상 여부)·`result`(`eventId` 포함, 정상·이상 모두)를 반환한다.
 
 ---
 
@@ -83,7 +83,7 @@ flowchart TB
 | # | Tool | 역할 | 선행 의존 | 산출 → 응답 필드 |
 |---|------|------|-----------|------------------|
 | ① | **이벤트 템플릿 분류** | 로그를 사전 정의된 이벤트 템플릿에 매칭 (규칙 기반) | — (선행) | `result.eventId` (이상 로그) |
-| ② | **이상 여부 판단 + 긴급도 분류** | 템플릿 기반으로 정상/이상 판정 및 위험도 산정. **분기 기준** | ① 필요 | `status`(이상=true/정상=false), `riskLevel` |
+| ② | **이상 여부 판단 + 긴급도 분류** | 템플릿 기반으로 정상/이상 판정 및 위험도 산정. **분기 기준** | ① 필요 | `isAbnormal`(이상=true/정상=false), `riskLevel` |
 | ③ | **클러스터(패턴) 분류** | 템플릿 기반으로 유사 로그 패턴(클러스터) 식별 | ② (이상) | `clusterId` |
 | ④ | **Node별 정보 조회·전달** | `node` 기준 부가 정보 조회 후 분석 컨텍스트로 제공 | ② (이상) | LLM 분석 컨텍스트 |
 
@@ -128,12 +128,12 @@ flowchart TB
 
 #### Response
 
-`result`는 정상·이상 모두 포함된다. **정상(`status: false`)이면** `summary`·`analysis`에 정상 사유만 담기고, `action`은 `""`, `eventId`·`riskLevel`·`clusterId`는 `null`이다. 아래 예시는 이상(`status: true`)인 경우다.
+`result`는 정상·이상 모두 포함된다. **정상(`isAbnormal: false`)이면** `summary`·`analysis`에 정상 사유만 담기고, `action`은 `""`, `eventId`·`riskLevel`·`clusterId`는 `null`이다. 아래 예시는 이상(`isAbnormal: true`)인 경우다.
 
 ```json
 {
   "logId": 0,
-  "status": true,
+  "isAbnormal": true,
   "result": {
     "eventId": "string",
     "riskLevel": "string",
@@ -150,7 +150,7 @@ flowchart TB
 | 필드 | 타입 | 설명 | 산출 |
 |------|------|------|------|
 | logId | int | 분석 대상 로그 식별자 | (요청 echo) |
-| status | bool | 이상 여부 (`true`=이상 / `false`=정상) | Tool ② |
+| isAbnormal | bool | 이상 여부 (`true`=이상 / `false`=정상) | Tool ② |
 | result | object | 분석 결과 (정상·이상 모두 포함) | 결과 매핑 |
 | result.eventId | str \| null | 이벤트 식별자 (`정상`이면 `null`) | Tool ① |
 | result.riskLevel | str \| null | 위험도 (`긴급`/`높음`/`보통`/`낮음`). `정상`이면 `null` | Tool ② |
@@ -167,8 +167,8 @@ flowchart TB
 
 스케줄러 기본 경로로, 여러 로그를 한 번에 분석한다. 개별 로그 실패가 전체 배치를 막지 않는다.
 
-각 항목은 두 개념을 구분한다 — **`processStatus`**(처리 완료 여부, `success`/`fail`)와 **`status`**(이상 여부, `true`=이상/`false`=정상).
-처리 실패면 `errorMessage`만 채운다. 성공이면 `status`와 `result`(`eventId` 포함)를 모두 채우되, 정상(`false`)이면 `result`의 `summary`·`analysis`(정상 사유)만 채워지고 나머지는 빈값이다.
+각 항목은 두 개념을 구분한다 — **`processStatus`**(처리 완료 여부, `success`/`fail`)와 **`isAbnormal`**(이상 여부, `true`=이상/`false`=정상).
+처리 실패면 `errorMessage`만 채운다. 성공이면 `isAbnormal`과 `result`(`eventId` 포함)를 모두 채우되, 정상(`false`)이면 `result`의 `summary`·`analysis`(정상 사유)만 채워지고 나머지는 빈값이다.
 
 #### Request
 
@@ -204,7 +204,7 @@ flowchart TB
     {
       "logId": 0,
       "processStatus": "success",
-      "status": true,
+      "isAbnormal": true,
       "result": {
         "eventId": "string",
         "riskLevel": "string",
@@ -231,7 +231,7 @@ flowchart TB
 | results | array | 로그별 분석 결과 배열 |
 | results[].logId | int | 로그 식별자 |
 | results[].processStatus | str | 처리 완료 여부 (`success` / `fail`) |
-| results[].status | bool \| null | 이상 여부 (`true`=이상 / `false`=정상). 처리 실패 시 null |
+| results[].isAbnormal | bool \| null | 이상 여부 (`true`=이상 / `false`=정상). 처리 실패 시 null |
 | results[].result | object \| null | 성공 시 분석 결과(eventId, riskLevel, summary, analysis, action, clusterId, analyzedAt). `정상`이면 일부 필드만 채워짐(summary·analysis; eventId·riskLevel·clusterId는 null). 처리 실패 시 null |
 | results[].result.eventId | str \| null | 이벤트 식별자 (`정상`이면 null) |
 | results[].errorMessage | str | 처리 실패 시 오류 메시지 |
