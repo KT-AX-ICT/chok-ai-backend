@@ -40,27 +40,27 @@ def test_uncovered_valid_event_id_returns_misc_matched_true() -> None:
     assert result.matched is True
 
 
-def test_unknown_event_id_returns_misc_matched_false() -> None:
+def test_unknown_event_id_returns_misc_matched_true() -> None:
     assigner = ClusterAssigner(clusters=FAKE_CLUSTERS)
 
     result = assigner.assign("unknown")
 
     assert result.cluster_id == MISC_CLUSTER_ID
-    assert result.matched is False
+    assert result.matched is True
 
 
-def test_duplicate_event_id_across_clusters_raises() -> None:
-    bad = [
+def test_multi_cluster_event_id_returns_misc_matched_false() -> None:
+    # event_id 가 둘 이상 클러스터에 배정되면 단일 배정 불가 → 미분류 + matched=False
+    ambiguous = [
         {"id": 0, "event_template": [{"event_id": "E1", "template": "a"}]},
         {"id": 1, "event_template": [{"event_id": "E1", "template": "b"}]},
     ]
+    assigner = ClusterAssigner(clusters=ambiguous)
 
-    try:
-        ClusterAssigner(clusters=bad)
-    except ValueError as e:
-        assert "E1" in str(e)
-    else:
-        raise AssertionError("중복 event_id 인데 ValueError 가 발생하지 않음")
+    result = assigner.assign("E1")
+
+    assert result.cluster_id == MISC_CLUSTER_ID
+    assert result.matched is False
 
 
 def test_assign_cluster_real_metadata_covered() -> None:
@@ -75,7 +75,7 @@ def test_assign_cluster_real_metadata_uncovered_and_unknown() -> None:
     unknown = assign_cluster("unknown")
 
     assert uncovered.cluster_id == 99 and uncovered.matched is True
-    assert unknown.cluster_id == 99 and unknown.matched is False
+    assert unknown.cluster_id == 99 and unknown.matched is True
 
 
 def test_every_curated_event_id_maps_to_its_cluster() -> None:

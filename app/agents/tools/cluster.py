@@ -11,8 +11,6 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from app.agents.tools.event_template import UNKNOWN_EVENT_ID
-
 METADATA_PATH = Path(__file__).parent / "metadata" / "clusters.json"
 MISC_CLUSTER_ID = 99
 
@@ -30,26 +28,23 @@ class ClusterAssigner:
     def __init__(self, clusters: list[dict] | None = None) -> None:
         if clusters is None:
             clusters = list(_load_clusters())
-        self._index: dict[str, int] = {}
+        # event_id 가 여러 클러스터에 걸칠 수 있으므로 cluster_id 집합으로 보관한다.
+        self._index: dict[str, set[int]] = {}
         for cluster in clusters:
             cluster_id = cluster["id"]
             for entry in cluster.get("event_template", []):
-                event_id = entry["event_id"]
-                if event_id in self._index:
-                    raise ValueError(
-                        f"event_id {event_id!r} assigned to multiple clusters "
-                        f"({self._index[event_id]} and {cluster_id})"
-                    )
-                self._index[event_id] = cluster_id
+                self._index.setdefault(entry["event_id"], set()).add(cluster_id)
 
     def assign(self, event_id: str) -> ClusterResult:
-        cluster_id = self._index.get(event_id)
-        if cluster_id is not None:
-            return ClusterResult(cluster_id=cluster_id, matched=True)
-        # 미커버: 유효 event_id 는 미분류로 배정(matched=True), unknown 만 matched=False
+        cluster_ids = self._index.get(event_id, set())
+        if len(cluster_ids) == 1:
+            # 단일 클러스터에 명확히 배정.
+            return ClusterResult(cluster_id=next(iter(cluster_ids)), matched=True)
+        # 0개(미커버·unknown) → 미분류이지만 배정 가능 → matched=True
+        # 2개 이상(다중 배정) → 단일 배정 불가 → matched=False
         return ClusterResult(
             cluster_id=MISC_CLUSTER_ID,
-            matched=event_id != UNKNOWN_EVENT_ID,
+            matched=len(cluster_ids) == 0,
         )
 
 
