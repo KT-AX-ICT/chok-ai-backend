@@ -1,0 +1,256 @@
+{
+  "nodes": {
+    "R30-M0-N9-C:J16-U01": {
+      "alert_pct": 41.96
+    },
+    "R04-M1-N4-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R27-M1-N4-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R10-M1-N5-C:J15-U11": {
+      "alert_pct": 0.7
+    },
+    "R16-M0-NB-C:J07-U11": {
+      "alert_pct": 0.7
+    },
+    "R15-M0-N9-C:J05-U11": {
+      "alert_pct": 0.7
+    },
+    "R13-M1-N2-C:J17-U01": {
+      "alert_pct": 0.7
+    },
+    "R01-M1-NA-C:J13-U01": {
+      "alert_pct": 0.7
+    },
+    "R01-M1-NA-C:J09-U01": {
+      "alert_pct": 0.7
+    },
+    "R05-M0-N7-C:J10-U11": {
+      "alert_pct": 0.7
+    },
+    "R02-M0-N0-C:J10-U01": {
+      "alert_pct": 0.7
+    },
+    "R15-M1-NF-C:J11-U11": {
+      "alert_pct": 0.7
+    },
+    "R12-M0-N2-C:J11-U01": {
+      "alert_pct": 0.7
+    },
+    "R14-M0-N2-C:J02-U01": {
+      "alert_pct": 0.7
+    },
+    "R04-M0-ND-C:J15-U01": {
+      "alert_pct": 0.7
+    },
+    "R01-M1-N6-C:J15-U11": {
+      "alert_pct": 0.7
+    },
+    "R06-M0-N7-C:J08-U01": {
+      "alert_pct": 0.7
+    },
+    "R12-M1-NC-C:J13-U11": {
+      "alert_pct": 0.7
+    },
+    "R06-M0-N0-C:J11-U11": {
+      "alert_pct": 0.7
+    },
+    "R24-M1-N0-C:J16-U01": {
+      "alert_pct": 0.7
+    },
+    "R20-M0-NE-C:J02-U01": {
+      "alert_pct": 0.7
+    },
+    "R25-M0-NB-C:J02-U11": {
+      "alert_pct": 0.7
+    },
+    "R11-M1-N6-C:J12-U01": {
+      "alert_pct": 0.7
+    },
+    "R24-M1-N6-C:J13-U01": {
+      "alert_pct": 0.7
+    },
+    "R07-M1-N2-C:J05-U11": {
+      "alert_pct": 0.7
+    },
+    "R05-M1-NB-C:J07-U11": {
+      "alert_pct": 0.7
+    },
+    "R16-M0-N4-C:J02-U11": {
+      "alert_pct": 0.7
+    },
+    "R03-M1-N8-C:J13-U11": {
+      "alert_pct": 0.7
+    },
+    "R06-M1-NC-C:J11-U01": {
+      "alert_pct": 0.7
+    },
+    "R20-M0-ND-C:J15-U11": {
+      "alert_pct": 0.7
+    },
+    "R25-M1-NF-C:J16-U01": {
+      "alert_pct": 0.7
+    },
+    "R21-M0-NC-C:J13-U11": {
+      "alert_pct": 0.7
+    },
+    "R21-M0-N4-C:J05-U11": {
+      "alert_pct": 0.7
+    },
+    "R32-M1-N8-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R12-M1-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R16-M1-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R01-M0-N1-C:J09-U11": {
+      "alert_pct": 0.7
+    },
+    "R04-M0-N1-C:J02-U01": {
+      "alert_pct": 0.7
+    },
+    "R20-M1-N8-C:J12-U01": {
+      "alert_pct": 0.7
+    },
+    "R21-M0-N8-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R71-M0-NA-C:J12-U11": {
+      "alert_pct": 0.7
+    },
+    "R63-M0-N4-C:J16-U01": {
+      "alert_pct": 0.7
+    },
+    "R42-M1-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R25-M1-N4-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R02-M1-N8-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R10-M1-N4-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R04-M0-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R55-M1-NC-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R24-M1-NC-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R01-M1-N4-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R43-M0-N8-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R41-M1-N4-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R53-M1-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R30-M0-N4-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R72-M1-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R27-M0-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R56-M0-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R05-M0-N8-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R44-M0-N4-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R71-M1-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R63-M1-NF-C:J15-U11": {
+      "alert_pct": 0.7
+    },
+    "R63-M1-N5-C:J17-U01": {
+      "alert_pct": 0.7
+    },
+    "R62-M0-N2-C:J09-U11": {
+      "alert_pct": 0.7
+    },
+    "R63-M0-N6-C:J12-U11": {
+      "alert_pct": 0.7
+    },
+    "R46-M1-NE-C:J14-U11": {
+      "alert_pct": 0.7
+    },
+    "R46-M1-NF-C:J11-U01": {
+      "alert_pct": 0.7
+    },
+    "R46-M1-N1-C:J02-U01": {
+      "alert_pct": 0.7
+    },
+    "R57-M0-NA-C:J13-U11": {
+      "alert_pct": 0.7
+    },
+    "R57-M0-N8-C:J12-U01": {
+      "alert_pct": 0.7
+    },
+    "R04-M1-N8-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R14-M0-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R13-M1-N4-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R22-M0-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R65-M1-NC-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R66-M1-N8-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R14-M0-N8-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R45-M1-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R54-M0-N0-I:J18-U01": {
+      "alert_pct": 0.7
+    },
+    "R33-M1-N4-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R46-M0-N8-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R63-M1-N0-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R74-M1-N8-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R37-M1-N8-I:J18-U11": {
+      "alert_pct": 0.7
+    },
+    "R32-M0-NC-I:J18-U01": {
+      "alert_pct": 0.7
+    }
+  }
+}
