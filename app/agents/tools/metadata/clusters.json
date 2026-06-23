@@ -17,7 +17,7 @@
   },
   {
     "id": 3,
-    "cluster_title": "커널 종료/패닉군",
+    "cluster_title": "커널 종료/패닉군 — 커널 종료",
     "description": "커널이 종료(terminated)되거나 패닉(panic)으로 실행이 중단되는 노드 다운 수준의 치명 장애. 주요 발생 Label은 KERNTERM(커널 종료).",
     "event_template": [
       {
@@ -33,7 +33,7 @@
   },
   {
     "id": 2,
-    "cluster_title": "ciod 통신/로딩 오류군",
+    "cluster_title": "ciod 통신/로딩 오류군 — 앱 심각 오류(링크 단절)",
     "description": "ciod 제어 스트림의 메시지 전송·로딩 실패로, 앱과 커널 간 통신 오류. 주요 발생 Label은 APPSEV(앱 심각 오류(링크 단절)) 외 APPREAD(메시지 읽기 실패), APPRES(연결 리셋), APPTO(연결 타임아웃).",
     "event_template": [
       {
@@ -77,7 +77,7 @@
   },
   {
     "id": 4,
-    "cluster_title": "커널 종료/패닉군",
+    "cluster_title": "커널 종료/패닉군 — rts 패닉/정지",
     "description": "커널이 종료(terminated)되거나 패닉(panic)으로 실행이 중단되는 노드 다운 수준의 치명 장애. 주요 발생 Label은 KERNRTSP(rts 패닉/정지). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
     "event_template": [
       {
@@ -101,7 +101,7 @@
   },
   {
     "id": 6,
-    "cluster_title": "ciod 통신/로딩 오류군",
+    "cluster_title": "ciod 통신/로딩 오류군 — 자식 프로세스 없음",
     "description": "ciod 제어 스트림의 메시지 전송·로딩 실패로, 앱과 커널 간 통신 오류. 주요 발생 Label은 APPCHILD(자식 프로세스 없음). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
     "event_template": [
       {
@@ -113,7 +113,7 @@
   },
   {
     "id": 7,
-    "cluster_title": "ciod 통신/로딩 오류군",
+    "cluster_title": "ciod 통신/로딩 오류군 — 입출력 오류",
     "description": "ciod 제어 스트림의 메시지 전송·로딩 실패로, 앱과 커널 간 통신 오류. 주요 발생 Label은 APPOUT(입출력 오류). (단일 템플릿 소표본 → 판정 신뢰도 낮음, 관찰 필요)",
     "event_template": [
       {

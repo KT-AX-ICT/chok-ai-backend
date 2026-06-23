@@ -15,7 +15,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 METADATA_PATH = Path(__file__).parent / "metadata" / "event_template.json"
 
@@ -25,9 +25,17 @@ UNKNOWN_EVENT_ID = "unknown"
 class EventTemplateResult(BaseModel):
     """이벤트 템플릿 판정 결과 (내부 Tool 결과 모델)."""
 
-    event_id: str
-    event_template: str | None = None
-    matched: bool = False
+    event_id: str = Field(
+        description="매칭된 BGL 이벤트 ID(예: 'E1'). 매칭 0건이면 'unknown'."
+    )
+    event_template: str | None = Field(
+        default=None,
+        description="매칭된 템플릿 문자열(<*> 와일드카드 포함). unknown 이면 None.",
+    )
+    matched: bool = Field(
+        default=False,
+        description="템플릿 매칭 성공 여부. False 면 event_id='unknown'.",
+    )
 
 
 class _CompiledTemplate:

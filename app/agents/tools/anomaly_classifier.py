@@ -5,11 +5,16 @@ Tool ①(event_template.py)에서 받은 ``event_id``를 ``metadata/event_analys
 ``is_anomaly`` 를 보고 직접 수행한다.
 
 - is_anomaly=False → 정상
+  - urgency: 정상이어도 이벤트 템플릿 기반 riskLevel(Critical/High/Mid/Low)을 그대로 부여한다.
+            (단발성은 정상이지만 잠재 심각도는 대시보드·추세 신호로 보존)
   - impact: 정상 판단 근거 (LLM → result.analysis)
   - action: 주의 조건 또는 None (LLM → result.action)
 - is_anomaly=True  → 비정상, urgency(Critical/High/Mid/Low) + 상세 정보 반환
   - impact: 장애 영향 범위 (LLM → result.analysis)
   - action: 권장 대응 조치 (LLM → result.action)
+- category: 이벤트의 도메인 분류(정상/비정상 공통). 어느 영역에서 발생한 이벤트인지 나타낸다.
+  - HARDWARE(하드웨어), KERN(커널), NETWORK(네트워크), FILESYSTEM(파일시스템),
+    APP(애플리케이션), UNKNOWN(미상/분류 불가)
 - event_id="unknown" 또는 미등록 → is_anomaly=True, category="UNKNOWN"
 
 LangGraph 등 오케스트레이션 프레임워크에 의존하지 않는 순수 함수로 작성한다.
@@ -20,7 +25,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 METADATA_PATH = Path(__file__).parent / "metadata" / "event_analysis_v2.json"
 
@@ -29,13 +34,12 @@ UNKNOWN_EVENT_ID = "unknown"
 
 # ── 긴급도 ──────────────────────────────────────────────────────────────────
 # API 응답 result.riskLevel 값으로 그대로 사용된다.
-# NONE: 정상 이벤트 (is_anomaly=False) 전용.
 class Urgency(str, Enum):
     CRITICAL = "Critical"
     HIGH = "High"
     MID = "Mid"
     LOW = "Low"
-    NONE = "None"
+    
 
 
 # ── Tool 출력 모델 ───────────────────────────────────────────────────────────
@@ -43,12 +47,29 @@ class Urgency(str, Enum):
 # - 정상: impact=정상 근거, action=주의 조건(없으면 None)
 # - 비정상: impact=장애 영향, action=권장 대응
 class AnomalyResult(BaseModel):
-    event_id: str
-    is_anomaly: bool
-    urgency: Urgency        # 정상이면 Urgency.NONE
-    category: str | None = None
-    impact: str | None = None
-    action: str | None = None
+    event_id: str = Field(
+        description="Tool① 이 판정한 이벤트 ID. 'unknown' 또는 미등록이면 UNKNOWN 처리."
+    )
+    is_anomaly: bool = Field(
+        description="비정상 여부. 호출 측 라우팅 기준 "
+        "(True→클러스터링 tool, False→정상 근거 산출 LLM).",
+    )
+    urgency: Urgency = Field(
+        description="긴급도(Critical/High/Mid/Low). 정상/비정상 모두 "
+        "템플릿 기반 riskLevel 을 그대로 사용. API result.riskLevel 로 직결.",
+    )
+    category: str | None = Field(
+        default=None,
+        description="이벤트 분류(HARDWARE/KERN/NETWORK 등). UNKNOWN 가능.",
+    )
+    impact: str | None = Field(
+        default=None,
+        description="영향 설명. 비정상=장애 영향 범위, 정상=정상 판단 근거.",
+    )
+    action: str | None = Field(
+        default=None,
+        description="권장 조치. 비정상=대응 조치, 정상=주의 조건(없으면 None).",
+    )
 
 
 # ── 분류기 ───────────────────────────────────────────────────────────────────
@@ -76,10 +97,15 @@ class AnomalyClassifier:
         is_anomaly: bool = ev["is_anomaly"]
 
         if not is_anomaly:
+            # 정상 단건이어도 잠재 심각도(riskLevel)는 그대로 부여한다.
+            # NOTE(향후 고도화): 현재는 단건(stateless) 기준 판정이다.
+            #   "단발은 정상이나 반복 시 위험" 유형(예: 단발성 머신 체크/RTS 오류)은
+            #   다건(빈도·시계열) 분석으로 urgency를 동적 격상하는 로직을 추가할 예정.
+            #   해당 격상은 집계 정보를 가진 클러스터링/오케스트레이터 계층에서 수행한다.
             return AnomalyResult(
                 event_id=event_id,
                 is_anomaly=False,
-                urgency=Urgency.NONE,
+                urgency=Urgency(ev["riskLevel"]),
                 category=ev.get("category"),
                 impact=ev.get("impact"),   # 정상 판단 근거
                 action=ev.get("action"),   # 주의 조건 (없으면 None)

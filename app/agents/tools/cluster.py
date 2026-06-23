@@ -9,7 +9,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 METADATA_PATH = Path(__file__).parent / "metadata" / "clusters.json"
 MISC_CLUSTER_ID = 99
@@ -18,8 +18,14 @@ MISC_CLUSTER_ID = 99
 class ClusterResult(BaseModel):
     """클러스터 배정 결과 (내부 Tool 결과 모델)."""
 
-    cluster_id: int
-    matched: bool
+    cluster_id: int = Field(
+        description="배정된 클러스터 ID. 단일 배정 실패·미커버·unknown 은 "
+        "미분류(99). API result.clusterId 로 직결.",
+    )
+    matched: bool = Field(
+        description="단일 배정 성공 여부. 0개 매핑(미분류)도 True, "
+        "2개 이상(다중 배정 모호)만 False.",
+    )
 
 
 class ClusterAssigner:
