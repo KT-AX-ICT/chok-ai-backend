@@ -2,6 +2,7 @@
 API 라우터 — POST /ai/v1/analyze, POST /ai/v1/analyze/batch
 """
 
+import logging
 import time
 from typing import Any
 
@@ -15,6 +16,8 @@ from app.schemas.analysis import (
     ErrorResponse,
 )
 from app.services.analysis_service import analyze_batch_logs, analyze_single_log
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai/v1", tags=["분석"])
 
@@ -35,9 +38,11 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     responses=_ERROR_RESPONSES,
 )
 async def analyze_single(request: AnalyzeRequest) -> AnalyzeResponse:
+    logger.info("단건 분석 요청 수신 — log_id=%s", request.log_id)
     start = time.perf_counter()
     status, result = await analyze_single_log(request)
     elapsed_ms = int((time.perf_counter() - start) * 1000)
+    logger.info("단건 분석 완료 — log_id=%s, elapsed_ms=%d", request.log_id, elapsed_ms)
 
     return AnalyzeResponse(
         log_id=request.log_id,
@@ -55,9 +60,11 @@ async def analyze_single(request: AnalyzeRequest) -> AnalyzeResponse:
 )
 async def analyze_batch(request: BatchAnalyzeRequest) -> BatchAnalyzeResponse:
     # 배치 건수 초과(>400)는 BatchAnalyzeRequest.max_length 검증으로 422 처리됨
+    logger.info("배치 분석 요청 수신 — 건수=%d", len(request.logs))
     start = time.perf_counter()
     results = await analyze_batch_logs(request.logs)
     elapsed_ms = int((time.perf_counter() - start) * 1000)
+    logger.info("배치 분석 완료 — 건수=%d, elapsed_ms=%d", len(request.logs), elapsed_ms)
 
     return BatchAnalyzeResponse(
         total_count=len(request.logs),

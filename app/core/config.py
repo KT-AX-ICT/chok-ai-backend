@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     llm_call_timeout_s: int = 60        # 개별 LLM 호출 타임아웃
     llm_max_retries: int = 6            # 지수 백오프 재시도 횟수 (429/5xx 대응)
 
+    # ── 로깅 ─────────────────────────────────────
+    # CHOK_AI_LOG_LEVEL 로 override 가능 (INFO/DEBUG/WARNING/ERROR)
+    log_level: str = "INFO"
+    log_dir: str = "logs"
+    log_file: str = "app.log"
+    log_max_bytes: int = 10_485_760     # 10 MB
+    log_backup_count: int = 5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
