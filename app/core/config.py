@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # 모델은 CHOK_AI_LLM_MODEL 로 override 가능
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.2
-    llm_max_tokens: int = 1024
+    llm_max_tokens: int = 2048  # 상세 analysis + 단계별 action 출력을 담기 위해 1024 → 2048 상향
 
     # ── 배치 처리 · 회복탄력성 ──────────────────
     batch_concurrency: int = 8          # 전역 asyncio.Semaphore 상한 (동시 LLM 호출 캡)

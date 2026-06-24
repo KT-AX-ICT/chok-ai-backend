@@ -31,17 +31,17 @@ from app.schemas.analysis import AnalyzeRequest, RiskLevel
 class DiagnosisOutput(BaseModel):
     """이상 로그 — LLM이 채우는 텍스트 4필드."""
 
-    summary: str = Field(..., min_length=1, description="이상 상황 한 문장 요약")
-    analysis: str = Field(..., min_length=1, description="원인 분석 (추정 여부 명시)")
-    action: str = Field(..., min_length=1, description="대응 방안")
+    analysis: str = Field(..., min_length=1, description="현상·영향·위험을 근거와 함께 상세 서술")
+    summary: str = Field(..., min_length=1, description="analysis를 한 문장으로 압축한 핵심 요약")
+    action: str = Field(..., min_length=1, description="제안형 대응 방안(명령형 아님)")
     reason: str = Field(..., min_length=1, description="사람이 읽을 수 있는 판정 근거 (응답 미노출, 내부 근거용)")
 
 
 class NormalReasonOutput(BaseModel):
     """정상 로그(FATAL→정상) — LLM이 채우는 정상 사유 2필드."""
 
-    summary: str = Field(..., min_length=1, description="정상으로 판단한 핵심 사유")
-    analysis: str = Field(..., min_length=1, description="정상 판단 근거")
+    analysis: str = Field(..., min_length=1, description="정상 판단 근거 (로그 본문·레벨·컴포넌트 기반 상세 서술)")
+    summary: str = Field(..., min_length=1, description="analysis를 한 문장으로 압축한 정상 판단 핵심 사유")
 
 
 @lru_cache
