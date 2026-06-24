@@ -420,3 +420,111 @@ def test_batch_concurrency_cap(monkeypatch) -> None:
     # 모든 건이 정상 처리됐는지 확인
     success_count = sum(1 for item in body["results"] if item["processStatus"] == "success")
     assert success_count == 20, f"성공 건수: {success_count}/20"
+
+
+# ──────────────────────────────────────────────
+# Phase D: Tool② impact/action/category → llm_node 주입 검증
+# ──────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_llm_node_passes_impact_to_run_diagnosis(monkeypatch) -> None:
+    """이상 경로: llm_node가 State의 impact/action_ctx/category를 run_diagnosis 인자로 전달한다.
+
+    run_diagnosis를 mock으로 교체한 뒤 call_args.kwargs에
+    category/impact/action_hint 값이 올바르게 전달되는지 검증한다.
+    """
+    from unittest.mock import AsyncMock
+
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    expected_return = {
+        "summary": "요약",
+        "analysis": "분석",
+        "action": "대응",
+        "reason": "근거",
+    }
+    mock_run = AsyncMock(return_value=expected_return)
+    monkeypatch.setattr(_graph, "run_diagnosis", mock_run)
+
+    log = AnalyzeRequest(
+        log_id=1,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="ciod: failed to read message prefix",
+        domain="BGL",
+    )
+
+    state = {
+        "log": log,
+        "event_id": "E52",
+        "is_anomaly": True,
+        "urgency": "Critical",
+        "category": "HARDWARE",
+        "impact": "DDR 메모리 오류로 인한 노드 다운.",
+        "action_ctx": "해당 노드 메모리 점검 및 교체",
+        "cluster_id": 0,
+        "cluster_ctx": "클러스터 0 — 커널 종료/패닉군",
+        "node_ctx": "Rack: R04 | Role: compute",
+    }
+
+    await _graph.llm_node(state)
+
+    assert mock_run.called, "run_diagnosis가 호출되지 않았습니다."
+    call_kwargs = mock_run.call_args.kwargs
+    assert call_kwargs["impact"] == "DDR 메모리 오류로 인한 노드 다운."
+    assert call_kwargs["action_hint"] == "해당 노드 메모리 점검 및 교체"
+    assert call_kwargs["category"] == "HARDWARE"
+
+
+@pytest.mark.asyncio
+async def test_llm_node_passes_impact_to_run_normal_reason(monkeypatch) -> None:
+    """정상 경로: llm_node가 State의 impact/category를 run_normal_reason 인자로 전달한다.
+
+    run_normal_reason을 mock으로 교체한 뒤 call_args.kwargs에
+    category/impact 값이 올바르게 전달되는지 검증한다.
+    """
+    from unittest.mock import AsyncMock
+
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    expected_return = {
+        "summary": "정상 사유 요약",
+        "analysis": "정상 사유 근거",
+    }
+    mock_run = AsyncMock(return_value=expected_return)
+    monkeypatch.setattr(_graph, "run_normal_reason", mock_run)
+
+    log = AnalyzeRequest(
+        log_id=2,
+        node="R30-M0-N9-C:J16-U01",
+        node_repeat="R30-M0-N9-C:J16-U01",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 01:00:00",
+        log_level="FATAL",
+        content="instruction cache parity error corrected",
+        domain="BGL",
+    )
+
+    state = {
+        "log": log,
+        "event_id": "E77",
+        "is_anomaly": False,
+        "urgency": "Low",
+        "category": "HARDWARE",
+        "impact": "ECC 자동 정정됨. 단발성으로 정상 동작.",
+        "action_ctx": None,
+    }
+
+    await _graph.llm_node(state)
+
+    assert mock_run.called, "run_normal_reason이 호출되지 않았습니다."
+    call_kwargs = mock_run.call_args.kwargs
+    assert call_kwargs["impact"] == "ECC 자동 정정됨. 단발성으로 정상 동작."
+    assert call_kwargs["category"] == "HARDWARE"
