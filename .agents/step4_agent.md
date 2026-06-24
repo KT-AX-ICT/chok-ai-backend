@@ -92,7 +92,7 @@ START ──▶ [① 이벤트 템플릿 분류] ──▶ [② 이상 여부 + 
 
 ## 4-5. LLM 설정
 
-- [ ] 모델 선택 및 클라이언트 구성 (`langchain-anthropic` `ChatAnthropic` 권장 — 최신 Claude 모델)
+- [ ] 모델 선택 및 클라이언트 구성 (`langchain-openai` `ChatOpenAI` 사용 — 현재 코드·Tier1 한도 기준 OpenAI)
 - [ ] API 키를 `core/config.py` 환경 변수에서 로드 (`CHOK_AI_` prefix)
 - [ ] **구조화 출력**: `with_structured_output(LLMAnalysis)` (JSON 파싱 오류 최소화)
 - [ ] 분석 일관성을 위해 낮은 temperature 권장, 최대 토큰 설정
@@ -121,6 +121,19 @@ START ──▶ [① 이벤트 템플릿 분류] ──▶ [② 이상 여부 + 
 - [ ] `analyze_batch_logs(request) -> LogBatchAnalyzeResponse`: `asyncio.gather(..., return_exceptions=True)`로 병렬 처리
 - [ ] 배치 개별 실패가 전체를 막지 않도록 `processStatus`(`success`/`fail`) + `errorMessage` 매핑
 - [ ] **LLM/메타데이터 로드 실패 시 명확한 예외**(`AppError` 계열) 반환 (5단계 라우터 에러 핸들링에서 잡음)
+
+### 4-7-1. 배치 동시성·타임아웃·재시도 (Tier 1 기준)
+
+> 모든 로그가 LLM을 1회씩 타므로 **배치당 LLM 호출 = 건수**(최대 400, [ModelDesign.md](ModelDesign.md) 2-4). OpenAI Tier 1(RPM 500 / TPM 500,000)에서 429를 피하도록 부하를 제어한다.
+
+- [ ] **동시성 캡 `asyncio.Semaphore(8)`**: LLM 호출을 동시에 최대 8건으로 제한 (소량 배치에서도 불필요한 직렬화 없이 처리량 확보)
+  - 동시성 8·호출 지연 ~3s 기준: ~160 req/min → RPM(500)은 여유. **TPM이 먼저 걸리므로** 요청당 토큰을 측정해 **~4k 근접 시 6으로 하향** (3k 이하면 8 유지)
+- [ ] **지수 백오프 재시도** 필수: LLM 클라이언트 `max_retries=6`(권장) — 세마포어는 평균 부하를 낮추고, 백오프가 순간 버스트의 429를 흡수 (둘은 한 쌍)
+- [ ] **타임아웃 2단**:
+  - 전체 배치 요청: **5분(300s)** — 동시성 8에서 400건 명목 ~2.5분이라 백오프 꼬리 지연까지 흡수
+  - **개별 LLM 호출: 30~60s** — 한 호출이 멈춰도 5분 예산을 통째로 잡아먹지 않고 빨리 실패→재시도
+- [ ] **프록시 체인 타임아웃 통일 주의**: 5분 동기 요청은 스케줄러(클라이언트) → 리버스 프록시/LB(nginx 기본 `proxy_read_timeout` 60s) → uvicorn **모든 홉**이 5분을 허용해야 한다. 한 군데라도 짧으면 거기서 끊김
+- [ ] *(향후)* 동기 처리 시간이 5분을 넘기게 되면 비동기 잡(job id 반환 후 폴링) 또는 청크 분할 전환 검토
 
 ---
 

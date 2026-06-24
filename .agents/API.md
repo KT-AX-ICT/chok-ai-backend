@@ -25,6 +25,7 @@
 - **Base URL**: `/ai/v1`
 - **Content-Type**: `application/json`
 - **시각 표기**: 모든 시각 문자열은 `yyyy-MM-dd HH:mm:ss` 형식 (요청 `occurredAt`, 응답 `analyzedAt`)
+- **배치 건수 상한**: 다건 분석은 한 요청에 **1~400건**(`logs` 배열). 0건 또는 401건 이상은 `422 VALIDATION_ERROR`로 거절 (상한 근거는 [ModelDesign.md](ModelDesign.md) 2-4)
 - **인증**: 미정(보류) — 추후 결정
 
 ---
@@ -192,7 +193,7 @@ flowchart TB
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| logs | array | 분석할 로그 객체 배열 (각 객체 필드는 단건 분석 Request와 동일, `domain` 포함) |
+| logs | array | 분석할 로그 객체 배열 (**1~400건**, 초과 시 `422`). 각 객체 필드는 단건 분석 Request와 동일, `domain` 포함 |
 
 #### Response
 
