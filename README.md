@@ -97,7 +97,7 @@ P0 범위는 다음 흐름을 우선합니다.
 - pydantic-settings 기반 공통 설정
 - 패키지별 담당/책임 README
 - 분석 endpoint (`POST /ai/v1/analyze`, `POST /ai/v1/analyze/batch`)
-- Spring-FastAPI 요청/응답 DTO (camelCase 계약, 정상/이상 status 포함)
+- Spring-FastAPI 요청/응답 DTO (camelCase 계약, 응답 is_abnormal(bool) 포함)
 - 이상 로그 근거 설명 / 정상 사유 Agent
 - OpenAI(LLM) 연동 및 구조화 출력
 - 분석 흐름 테스트 (analyze·batch·에러 매핑)
