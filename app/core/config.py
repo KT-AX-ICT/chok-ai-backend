@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,19 @@ class Settings(BaseSettings):
     cors_allow_credentials: bool = True
     cors_max_age: int = 3600
 
+    # ── LLM ─────────────────────────────────────
+    # OPENAI_API_KEY는 prefix 없이 표준 이름 그대로 읽음
+    # (validation_alias가 env_prefix를 무시함)
+    openai_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        validation_alias="OPENAI_API_KEY",
+    )
+    # 모델은 CHOK_AI_LLM_MODEL 로 override 가능
+    llm_model: str = "gpt-4o-mini"
+    llm_temperature: float = 0.2
+    llm_max_tokens: int = 1024
+    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -36,3 +50,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+
