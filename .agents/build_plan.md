@@ -557,6 +557,8 @@ Phase 0 (환경복구)
     ├──→ Phase 1 (정합성 수정) ──┐
     └──→ Phase 2 (Tool 실연동) ──┤
                                   └──→ Phase 3 (LangGraph 전환) ──→ Phase 4 (배치 회복탄력성) ──→ Phase 5 (테스트)
+                                                                                                          │
+                                                                                                          └──→ Phase 6 (클러스터 컨텍스트 주입)
 ```
 
 - **Phase 0**이 막히면 전부 막힘
@@ -564,6 +566,133 @@ Phase 0 (환경복구)
 - **Phase 3**은 Phase 2 위에서 진행 (Tool 실연동 필수)
 - **Phase 4**는 Phase 3 이후 (그래프 기반 배치 처리)
 - **Phase 5**는 Phase 3 이후부터 점진적 병행 가능, Phase 4 완료 후 전체 검증
+- **Phase 6**은 Phase 5(pytest 33건 green) 완료 이후 후속 개선 — `app/agents/graph.py` 존재가 전제 (Phase 3 산출물)
+
+---
+
+## Phase 6: 클러스터 컨텍스트 주입
+
+> **의존**: Phase 0~5 완료 (pytest 33건 green 확인)
+> **목표**: LLM 프롬프트에 `cluster_id` 정수만 전달되던 문제를 해소. `clusters.json`의 `cluster_title`·`description`을 프롬프트에 주입하여 LLM이 클러스터 패턴 의미를 인식하도록 풍부화. **응답 `clusterId`(정수)는 불변.**
+> **설계 참조**: `step4_agent.md` 4-6 "이상 경로: `urgency`/`category`/`impact`/`cluster`/`node` 컨텍스트 주입 위치 지정" — 노드(④)의 `_format_node_ctx` 패턴을 클러스터에도 동일하게 미러링.
+
+### 작업 항목
+
+#### 6-1. `app/agents/tools/cluster.py` — `ClusterResult` 필드 추가 + `assign_cluster` 보강
+
+- [ ] **6-1-1.** `ClusterResult`에 선택 필드 2개 추가 (additive, 기존 필드 불변):
+  ```python
+  cluster_title: str | None = None    # clusters.json의 클러스터 명칭
+  description: str | None = None      # clusters.json의 클러스터 설명
+  ```
+- [ ] **6-1-2.** `assign_cluster`가 clusters.json에서 해당 `cluster_id`에 맞는 `cluster_title`·`description`을 읽어 `ClusterResult`에 채움:
+  - `cluster_id=99` (misc) 포함 처리 — 99에도 `cluster_title`·`description` 존재 시 채움, 없으면 `None` 유지
+  - 기존 `matched` 필드 로직은 변경 없음
+
+**영향 파일**: `app/agents/tools/cluster.py`
+
+**리스크**: `tests/cluster/` 하위 `ClusterResult` 필드를 직접 검증하는 테스트가 있다면 필드 추가로 깨질 수 있음 → 해당 테스트에 신규 필드 어서션을 함께 추가하거나, 기본값 `None`으로 기존 어서션이 통과함을 확인 후 진행.
+
+---
+
+#### 6-2. `app/agents/graph.py` — `_format_cluster_ctx` 헬퍼 + `cluster_node` / `llm_node` 수정
+
+- [ ] **6-2-1.** `_format_cluster_ctx(result: ClusterResult) -> str` 헬퍼 추가 (노드 ④의 `_format_node_ctx` 패턴 미러링):
+  ```python
+  def _format_cluster_ctx(result: ClusterResult) -> str:
+      parts = [f"ClusterId: {result.cluster_id}"]
+      if result.cluster_title:
+          parts.append(f"Title: {result.cluster_title}")
+      if result.description:
+          parts.append(f"Description: {result.description}")
+      return " | ".join(parts)
+  ```
+- [ ] **6-2-2.** `cluster_node`에서 `assign_cluster` 호출 후 `state["cluster_ctx"]` 생성:
+  ```python
+  state["cluster_ctx"] = _format_cluster_ctx(result)
+  ```
+- [ ] **6-2-3.** `AgentState`에 `cluster_ctx: str | None` 키 추가
+- [ ] **6-2-4.** `llm_node`에서 이상 경로 분기 시 `run_diagnosis`에 `cluster_ctx=state.get("cluster_ctx")` 전달
+
+**영향 파일**: `app/agents/graph.py`
+
+**리스크**: `cluster_ctx`는 이상 경로에서만 생성됨. 정상 경로의 `llm_node`가 `state.get("cluster_ctx")`를 호출할 때 `None`이 반환되어야 하며, `run_diagnosis`가 `None`을 허용하지 않으면 KeyError/TypeError 발생 → 6-3에서 시그니처를 `Optional`로 선언하여 방어.
+
+---
+
+#### 6-3. `app/agents/diagnosis_agent.py` — `run_diagnosis` 시그니처에 `cluster_ctx` 반영
+
+- [ ] **6-3-1.** `run_diagnosis` 시그니처에 `cluster_ctx: str | None = None` 파라미터 추가:
+  ```python
+  async def run_diagnosis(
+      ...,
+      cluster_ctx: str | None = None,
+  ) -> LLMAnalysis:
+  ```
+- [ ] **6-3-2.** `cluster_ctx`를 메시지 구성 시 `node_ctx`와 동일한 방식으로 프롬프트 변수에 전달
+
+**영향 파일**: `app/agents/diagnosis_agent.py`
+
+**리스크**: 기존 `run_diagnosis` 호출 지점이 여러 곳이면 시그니처 변경 시 누락 → grep으로 전체 호출 지점 확인 후 기본값 `None` 보장.
+
+---
+
+#### 6-4. `app/agents/prompts/diagnosis.py` — `USER_PROMPT_TEMPLATE` 클러스터 라인 풍부화
+
+- [ ] **6-4-1.** `USER_PROMPT_TEMPLATE`의 클러스터 관련 라인을 제목·설명 포함 형태로 교체:
+  ```
+  # Before
+  - 클러스터 ID: {cluster_id}
+
+  # After
+  - 클러스터 컨텍스트: {cluster_ctx}
+    (예: ClusterId: 3 | Title: 메모리 과부하 | Description: 메모리 사용률 급증 패턴)
+  ```
+  - `{cluster_ctx}` 플레이스홀더는 `_format_cluster_ctx`가 생성한 문자열을 그대로 삽입
+  - `cluster_ctx`가 `None`이면 `"(클러스터 정보 없음)"` 폴백 처리
+
+**영향 파일**: `app/agents/prompts/diagnosis.py`
+
+**리스크**: 낮음. 플레이스홀더 명칭 변경이므로 템플릿 포맷 오류 없이 `.format()` 호출 시그니처와 일치하는지만 확인.
+
+---
+
+#### 6-5. 응답 불변 확인 + 테스트
+
+- [ ] **6-5-1.** `map_node`·`clusterId` 응답 경로는 변경 없음 — `state["cluster_id"]`(정수)를 그대로 `result.clusterId`로 매핑하는 기존 로직 유지
+- [ ] **6-5-2.** 기존 pytest 33건 green 유지 확인: `pytest --tb=short -v`
+- [ ] **6-5-3.** cluster_ctx 주입 검증 테스트 1건 추가:
+  - 이상 경로 실행 시 `run_diagnosis`가 `cluster_ctx`에 `cluster_title`·`description`을 포함한 문자열을 받는지 spy/mock으로 검증
+  - 정상 경로에서 `cluster_ctx=None`임을 확인
+
+**영향 파일**: `tests/test_analyze.py` (또는 `tests/cluster/` 신규 테스트)
+
+**리스크**: `ClusterResult` 필드 추가로 기존 cluster Tool 테스트가 깨질 수 있음 (6-1 참조) → 함께 수정.
+
+---
+
+### 영향 파일 요약
+
+| 파일 | 변경 유형 | 비고 |
+|------|-----------|------|
+| `app/agents/tools/cluster.py` | 필드 추가 (additive) | `ClusterResult.cluster_title`, `.description` |
+| `app/agents/graph.py` | 헬퍼 추가 + 노드 수정 | `_format_cluster_ctx`, `cluster_ctx` state 키 |
+| `app/agents/diagnosis_agent.py` | 시그니처 확장 | `run_diagnosis(cluster_ctx=None)` |
+| `app/agents/prompts/diagnosis.py` | 템플릿 수정 | `{cluster_ctx}` 플레이스홀더로 교체 |
+| `tests/test_analyze.py` | 테스트 추가 | cluster_ctx 주입 검증 1건 |
+
+### 완료 기준 (DoD)
+
+- [ ] LLM에 전달되는 프롬프트에 `cluster_title`·`description`이 포함됨 (spy 또는 로그로 확인)
+- [ ] 응답 `clusterId`가 기존과 동일한 정수값으로 반환됨 (불변)
+- [ ] 전체 `pytest` green (기존 33건 + cluster_ctx 주입 검증 1건 포함)
+- [ ] `cluster_id=99` (misc) 처리 시 오류 없음
+
+### 리스크
+
+- **ClusterResult 필드 추가 → 기존 테스트 파손**: 기본값 `None` 덕분에 대부분 무해하나, 필드 존재 여부를 `hasattr`나 `model_fields`로 검증하는 테스트는 함께 수정 필요
+- **`_format_cluster_ctx` None 폴백 누락**: `cluster_title`이나 `description`이 `None`인 클러스터에 대해 포매터가 빈 `parts`를 생성할 수 있음 — `if value` 가드로 방어
+- **정상 경로 `cluster_ctx` 미생성**: 정상 경로에서 `cluster_node`를 건너뛰므로 `state["cluster_ctx"]`가 존재하지 않음 → `state.get("cluster_ctx")` 패턴으로 `None` 안전 접근 필수
 
 ---
 
