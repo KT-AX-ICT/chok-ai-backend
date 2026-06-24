@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+AGENTS.local.md
+CLAUDE.local.md
+.env
+.env.*
+!.env.example
+logs/
+.langgraph_api/
+
+# 개인 작업 파일
