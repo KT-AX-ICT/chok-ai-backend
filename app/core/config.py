@@ -36,7 +36,12 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.2
     llm_max_tokens: int = 1024
-    
+
+    # ── 배치 처리 · 회복탄력성 ──────────────────
+    batch_concurrency: int = 8          # 전역 asyncio.Semaphore 상한 (동시 LLM 호출 캡)
+    batch_timeout_s: int = 300          # 전체 배치 타임아웃 (5분)
+    llm_call_timeout_s: int = 60        # 개별 LLM 호출 타임아웃
+    llm_max_retries: int = 6            # 지수 백오프 재시도 횟수 (429/5xx 대응)
 
     model_config = SettingsConfigDict(
         env_file=".env",

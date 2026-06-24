@@ -88,3 +88,21 @@ def test_every_curated_event_id_maps_to_its_cluster() -> None:
             result = assign_cluster(entry["event_id"])
             assert result.cluster_id == cluster["id"]
             assert result.matched is True
+
+
+def test_cluster_result_includes_title_and_description_from_real_metadata() -> None:
+    # E111 → cluster 3 (커널 종료/패닉군 — 커널 종료)
+    result = assign_cluster("E111")
+
+    assert result.cluster_id == 3
+    assert result.cluster_title == "커널 종료/패닉군 — 커널 종료"
+    assert result.description is not None and len(result.description) > 0
+
+
+def test_misc_cluster_result_includes_title_and_description() -> None:
+    # unknown event_id → cluster 99 (미분류)
+    result = assign_cluster("unknown")
+
+    assert result.cluster_id == 99
+    assert result.cluster_title == "미분류 (관리자 검토 필요)"
+    assert result.description is not None and len(result.description) > 0

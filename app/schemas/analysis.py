@@ -77,9 +77,9 @@ class AnalyzeRequest(CamelModel):
 
 
 class BatchAnalyzeRequest(CamelModel):
-    """다건 분석 요청 — 스케줄러 기본 경로. 최대 500건(초과 시 422)."""
+    """다건 분석 요청 — 스케줄러 기본 경로. 최대 400건(초과 시 422)."""
 
-    logs: list[AnalyzeRequest] = Field(..., min_length=1, max_length=500)
+    logs: list[AnalyzeRequest] = Field(..., min_length=1, max_length=400)
 
 
 # ──────────────────────────────────────────────
@@ -89,6 +89,7 @@ class BatchAnalyzeRequest(CamelModel):
 
 class AnalyzeResult(CamelModel):
     """분석 결과 본문 (log_analysis 한 행에 매핑)."""
+    event_id: str | None = None                          # 이상: 이벤트 ID / 정상: null
     risk_level: RiskLevel | None = None                  # 이상: 위험도 / 정상: null
     summary: str                                         # 공통 — 정상이면 정상 사유
     analysis: str                                        # 공통 — 정상이면 정상 사유
@@ -109,9 +110,8 @@ class AnalyzeResponse(CamelModel):
     """단건 응답 — 처리 실패는 에러 응답(ErrorResponse)으로 떨어지므로 항상 is_abnormal·result 존재."""
 
     log_id: int
-    event_id: str                            # Tool①
     is_abnormal: bool                        # 이상=True / 정상=False (응답 전용; 내부 status에서 변환)
-    result: AnalyzeResult                    # 항상 포함 (정상이면 일부 필드 빈값)
+    result: AnalyzeResult                    # 항상 포함 (eventId 포함, 정상이면 일부 필드 빈값)
     processing_time_ms: int = Field(..., ge=0)
 
 
@@ -124,17 +124,16 @@ class BatchItemResult(CamelModel):
     """배치 내 개별 항목 결과 — 개별 실패가 전체 배치를 막지 않음."""
 
     log_id: int
-    event_id: str | None = None              # Tool① 산출. 처리 실패 시 null
     process_status: ProcessStatus            # 처리 완료 여부 (success/fail)
     is_abnormal: bool | None = None          # 이상=True / 정상=False. 처리 실패 시 null
-    result: AnalyzeResult | None = None      # 성공 시 채움. 처리 실패 시 null
-    error: str | None = None                 # 처리 실패 시 사유
+    result: AnalyzeResult | None = None      # 성공 시 채움 (eventId 포함). 처리 실패 시 null
+    error_message: str | None = None         # 처리 실패 시 사유 (alias: errorMessage)
 
     @model_validator(mode="after")
     def _check(self):
         if self.process_status is ProcessStatus.FAIL:
-            if self.error is None:
-                raise ValueError("fail 항목은 error가 필요합니다")
+            if self.error_message is None:
+                raise ValueError("fail 항목은 errorMessage가 필요합니다")
         else:  # success
             if self.is_abnormal is None:
                 raise ValueError("success 항목은 is_abnormal이 필요합니다")
@@ -156,7 +155,7 @@ class BatchAnalyzeResponse(CamelModel):
 # ──────────────────────────────────────────────
 
 class ErrorResponse(CamelModel):
-    """요청 자체 실패 시 공통 에러 스키마 (배치 개별 실패는 BatchItemResult.error로 표현)."""
+    """요청 자체 실패 시 공통 에러 스키마 (배치 개별 실패는 BatchItemResult.error_message로 표현)."""
 
     code: str = Field(..., examples=["VALIDATION_ERROR"])
     message: str = Field(..., examples=["요청 스키마 검증 실패"])

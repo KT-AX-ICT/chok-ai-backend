@@ -1,0 +1,132 @@
+[2026-06-24 10:00:00] [DONE] step4_agent.md를 4-Tool LangGraph 조건 분기 설계로 재작성
+[2026-06-24 10:00:01] [DONE] step4_graph.md를 4-Tool LangGraph 흐름도에 맞게 재작성
+[2026-06-24 10:05:00] [DONE] 설계 문서 전체에서 is_anomaly를 isAbnormal로 변경
+[2026-06-24 10:05:01] [DONE] 설계 문서에서 정상 경로 긴급도를 unassigned으로 정의
+[2026-06-24 10:05:02] [DONE] 설계 문서에서 Tool 3, Tool 4를 비정상 경로 전용으로 제한
+[2026-06-24 10:05:03] [DONE] 설계 문서에서 cluster 99 원시값 노출 유지
+[2026-06-24 10:10:00] [DONE] ModelDesign.md에 배치 max_length=400, 초과 시 422 설정
+[2026-06-24 10:10:01] [DONE] API.md에 Semaphore(8) 동시성 제한 추가
+[2026-06-24 10:10:02] [DONE] step4_agent.md에 지수 백오프 max_retries=6 추가
+[2026-06-24 10:10:03] [DONE] 설계 문서에 전역 타임아웃 5분, LLM 호출당 30-60초 설정
+[2026-06-24 10:15:00] [DONE] app/main.py 현재 구현 상태 분석
+[2026-06-24 10:15:01] [DONE] app/api/router.py 엔드포인트 정의 분석
+[2026-06-24 10:15:02] [DONE] app/schemas/analysis.py 요청/응답 모델 분석
+[2026-06-24 10:15:03] [DONE] app/services/analysis_service.py 서비스 로직 분석
+[2026-06-24 10:15:04] [DONE] app/agents/diagnosis_agent.py 에이전트 구조 분석
+[2026-06-24 10:15:05] [DONE] app/core/* 설정 및 의존성 분석
+[2026-06-24 10:20:00] [DOING] 갭 식별: asyncio.gather 대신 LangGraph StateGraph 필요
+[2026-06-24 10:20:01] [DOING] 갭 식별: analysis_service의 Tool 1-4 스텁이 app/agents/tools에 미연결
+[2026-06-24 10:20:02] [DOING] 갭 식별: 배치 동시성/백오프/타임아웃 로직 미구현
+[2026-06-24 10:20:03] [DOING] 갭 식별: 스키마 배치 제한이 500이나 설계는 400 지정
+[2026-06-24 10:20:04] [DOING] 갭 식별: main.py에서 Request/JSONResponse 미임포트 참조
+[2026-06-24 10:25:00] [TODO] 코드-설계 갭을 의존성 순서로 우선순위 정리
+[2026-06-24 10:25:01] [TODO] 갭 분석 기반 단계별 구현 계획 초안 작성
+[2026-06-24 10:25:02] [TODO] Phase 1 정의: 스키마 배치 제한 500에서 400으로 수정
+[2026-06-24 10:25:03] [TODO] Phase 1 정의: main.py 미임포트 Request/JSONResponse 참조 수정
+[2026-06-24 10:25:04] [TODO] Phase 2 정의: asyncio.gather를 LangGraph StateGraph로 교체 구현
+[2026-06-24 10:25:05] [TODO] Phase 2 정의: Tool 1(분류)을 agents/tools 구현에 연결
+[2026-06-24 10:25:06] [TODO] Phase 2 정의: Tool 2(클러스터링)를 agents/tools 구현에 연결
+[2026-06-24 10:25:07] [TODO] Phase 2 정의: Tool 3(진단)을 agents/tools 구현에 연결
+[2026-06-24 10:25:08] [TODO] Phase 2 정의: Tool 4(긴급도)를 agents/tools 구현에 연결
+[2026-06-24 10:25:09] [TODO] Phase 3 정의: Semaphore(8) 동시성 제어 구현
+[2026-06-24 10:25:10] [TODO] Phase 3 정의: 지수 백오프 max_retries=6 구현
+[2026-06-24 10:25:11] [TODO] Phase 3 정의: 전역 5분 및 호출당 30-60초 타임아웃 구현
+[2026-06-24 10:25:12] [TODO] Phase 3 정의: 정상/비정상 경로 조건 분기 추가
+[2026-06-24 10:25:13] [TODO] 전체 Phase 통합 구현 계획 문서 작성
+[2026-06-24 10:25:14] [TODO] 구현 계획의 설계 문서 대비 완전성 검토
+[2026-06-24 11:12:16] [DONE] uv.lock 재파싱 검증 - uv run 정상 동작 확인
+[2026-06-24 11:12:17] [DONE] app.main import 재검증 - ZoneInfoNotFoundError 실패 확인
+[2026-06-24 11:12:18] [DONE] pyproject 의존성 점검 - tzdata 미선언/미설치 확인
+[2026-06-24 11:12:19] [DONE] pyproject 의존성 점검 - langgraph 미선언/미설치 확인
+[2026-06-24 11:18:41] [DOING] Phase 0 환경복구 착수
+[2026-06-24 11:18:42] [DONE] pyproject.toml에 tzdata 의존성 추가
+[2026-06-24 11:18:43] [DONE] pyproject.toml에 langgraph 의존성 추가
+[2026-06-24 11:18:44] [DONE] pyproject.toml에서 httpx2를 httpx로 수정
+[2026-06-24 11:18:45] [DONE] uv.lock 재생성 완료
+[2026-06-24 11:18:46] [DONE] app/main.py 죽은 핸들러(라인 57-66) 삭제
+[2026-06-24 11:18:47] [DONE] 검증: app.main import 정상 (IMPORT OK)
+[2026-06-24 11:18:48] [DONE] 검증: langgraph import 정상 (LANGGRAPH OK)
+[2026-06-24 11:18:49] [DONE] 검증: pytest 10/10 통과
+[2026-06-24 11:43:00] [DONE] Phase 0 환경복구 완료
+[2026-06-24 11:43:01] [DOING] Phase 1 착수: 정합성 수정
+[2026-06-24 11:43:02] [DOING] Phase 2 착수: Tool 1/2/3/4 실연동
+[2026-06-24 11:50:00] [DONE] Phase 1: schemas/analysis.py 배치 max_length 500->400
+[2026-06-24 11:50:01] [DONE] Phase 1: tests/test_analyze.py over-limit 파라미터 501/600->401/500
+[2026-06-24 11:50:02] [DONE] Phase 1: step4_agent.md LLM provider ChatAnthropic->ChatOpenAI 정정
+[2026-06-24 11:50:03] [DONE] Phase 2: classify_event_template 스텁->extract_event_template 연동
+[2026-06-24 11:50:04] [DONE] Phase 2: classify_status_urgency 스텁->classify_anomaly 연동
+[2026-06-24 11:50:05] [DONE] Phase 2: Urgency 영문->한글 변환맵 적용
+[2026-06-24 11:50:06] [DONE] Phase 2: 정상 판정 시 risk_level=None 덮어쓰기
+[2026-06-24 11:50:07] [DONE] Phase 2: classify_cluster 스텁->assign_cluster 연동 (미분류 99 유지)
+[2026-06-24 11:50:08] [DONE] Phase 2: fetch_node_info 스텁->get_node_info + _format_node_ctx 연동
+[2026-06-24 11:50:09] [DONE] 검증: pytest 26건 통과 (analyze 9/health 1/event_template 9/cluster 5/node_info 2)
+[2026-06-24 11:50:10] [DONE] Phase 1 + Phase 2 완료
+[2026-06-24 11:50:11] [DOING] Phase 3A 착수: DTO 계약 정렬 - eventId를 result 안으로 이동
+[2026-06-24 11:50:12] [DOING] Phase 3A 착수: 배치 error 필드를 errorMessage로 변경
+[2026-06-24 11:50:13] [DOING] Phase 3A 착수: LLM reason 필드 추가 (미노출)
+[2026-06-24 11:50:14] [DOING] Phase 3B 착수: graph.py 신설 - LangGraph StateGraph 전환
+[2026-06-24 11:50:15] [DOING] Phase 3B 착수: 6노드+조건부분기 그래프 구성
+[2026-06-24 11:50:16] [DOING] Phase 3B 착수: analyze_single_log을 graph.ainvoke로 교체
+[2026-06-24 11:59:25] [DONE] Phase 3-A: schemas AnalyzeResult에 event_id 필드 추가 (정상 None)
+[2026-06-24 11:59:26] [DONE] Phase 3-A: AnalyzeResponse top-level event_id 제거
+[2026-06-24 11:59:27] [DONE] Phase 3-A: BatchItemResult error->error_message(errorMessage) 변경
+[2026-06-24 11:59:28] [DONE] Phase 3-A: BatchItemResult top-level event_id 제거 (result 내부로)
+[2026-06-24 11:59:29] [DONE] Phase 3-A: DiagnosisOutput reason 필드 추가 (내부용, 응답 미노출)
+[2026-06-24 11:59:30] [DONE] Phase 3-A: analyze_single_log 반환 (event_id,status,result)->(status,result)
+[2026-06-24 11:59:31] [DONE] Phase 3-A: tests eventId를 result.eventId로 검증 갱신, 배치 errorMessage로 갱신
+[2026-06-24 11:59:32] [DONE] 검증: Phase 3-A pytest 10건 통과
+[2026-06-24 11:59:33] [DONE] Phase 3-B: app/agents/graph.py 신규 (AgentState TypedDict + 6노드)
+[2026-06-24 11:59:34] [DONE] Phase 3-B: route_by_anomaly 조건부 분기 (정상->llm / 이상->cluster+node_info)
+[2026-06-24 11:59:35] [DONE] Phase 3-B: add_conditional_edges fan-out/fan-in 엣지 연결
+[2026-06-24 11:59:36] [DONE] Phase 3-B: graph.compile() 모듈 레벨 1회
+[2026-06-24 11:59:37] [DONE] Phase 3-B: analyze_single_log을 graph.ainvoke로 교체, 수기 오케스트레이션 제거
+[2026-06-24 11:59:38] [DONE] Phase 3-B: tests monkeypatch SVC->GRAPH(app.agents.graph) 경로 갱신
+[2026-06-24 11:59:39] [DONE] 검증: Phase 3-B 분기 동작 확인 (정상 4노드 / 이상 6노드)
+[2026-06-24 11:59:40] [DONE] 검증: 전체 pytest 27건 통과
+[2026-06-24 11:59:41] [DOING] Phase 4: config에 배치 동시성 설정 추가
+[2026-06-24 11:59:42] [DOING] Phase 4: 전역 Semaphore(8) 구현
+[2026-06-24 11:59:43] [DOING] Phase 4: max_retries=6 지수 백오프 구현
+[2026-06-24 11:59:44] [DOING] Phase 4: 개별 호출 타임아웃 60s 구현
+[2026-06-24 11:59:45] [DOING] Phase 4: 전체 배치 타임아웃 300s 구현
+[2026-06-24 12:00:00] [검증] 재개 시 실측: git 워킹트리에 Phase 0~4 변경 반영 확인
+[2026-06-24 12:00:01] [검증] 재개 시 실측: app.main + app.agents.graph import 정상
+[2026-06-24 12:00:02] [검증] 재개 시 실측: 전체 pytest 27건 통과
+[2026-06-24 12:00:03] [진행중] Phase 5-1: 정상 판정 시 cluster/node_info 노드 스킵 분기 테스트 신규 작성
+[2026-06-24 12:00:04] [진행중] Phase 5-2: Tool 1~4 실연동 통합 테스트 신규 작성
+[2026-06-24 12:00:05] [진행중] Phase 5-3: 배치 동시성 상한 테스트 신규 작성 (peak ≤ 8 검증)
+[2026-06-24 12:05:00] [완료] Phase 5-1: test_branch_normal_skips_cluster_and_node_info 추가 (정상 시 ③④ spy 0회)
+[2026-06-24 12:05:01] [완료] Phase 5-1: test_branch_anomaly_runs_cluster_and_node_info 추가 (이상 시 ③④ spy 각 1회)
+[2026-06-24 12:05:02] [완료] Phase 5-2: test_tool_integration_known_event_anomaly 추가 (data storage interrupt→E52/긴급/cluster0)
+[2026-06-24 12:05:03] [완료] Phase 5-2: test_tool_integration_unknown_content_fallback 추가 (미등록→unknown/이상/보통/cluster99)
+[2026-06-24 12:05:04] [완료] Phase 5-2: test_tool_integration_known_event_normal 추가 (instruction cache parity→E77 정상/None)
+[2026-06-24 12:05:05] [완료] Phase 5-3: test_batch_concurrency_cap 추가 (20건 배치 peak 동시 ≤ 8)
+[2026-06-24 12:05:06] [검증] Phase 5: 전체 pytest 33건 통과 (기존 27 + 신규 6)
+[2026-06-24 12:05:07] [완료] 전체 빌드 Phase 0~5 완료 — feat/langgraph LangGraph 전환 + DTO 정렬 + 배치 회복탄력성 + 테스트 보강
+[2026-06-24 14:00:00] [진행중] Phase 6: cluster.py ClusterResult에 cluster_title/description 필드 추가
+[2026-06-24 14:00:01] [진행중] Phase 6: assign_cluster가 clusters.json에서 제목·설명 채움(99 misc 포함)
+[2026-06-24 14:00:02] [진행중] Phase 6: graph.py _format_cluster_ctx 헬퍼 추가 및 cluster_node에서 state.cluster_ctx 생성
+[2026-06-24 14:00:03] [진행중] Phase 6: llm_node가 run_diagnosis에 cluster_ctx 전달
+[2026-06-24 14:00:04] [진행중] Phase 6: prompts/diagnosis.py 클러스터 라인에 제목·설명 주입
+[2026-06-24 14:00:05] [진행중] Phase 6: 응답 clusterId 정수 불변 유지(프롬프트만 풍부화)
+[2026-06-24 14:30:00] [완료] Phase 6: cluster.py ClusterResult에 cluster_title/description 필드 추가(additive)
+[2026-06-24 14:30:01] [완료] Phase 6: assign_cluster가 clusters.json에서 제목·설명 채움(99 misc 포함)
+[2026-06-24 14:30:02] [완료] Phase 6: graph.py _format_cluster_ctx 헬퍼 추가 + cluster_node에서 state.cluster_ctx 생성
+[2026-06-24 14:30:03] [완료] Phase 6: llm_node가 run_diagnosis에 cluster_ctx 전달(cluster_id 대체)
+[2026-06-24 14:30:04] [완료] Phase 6: diagnosis_agent run_diagnosis 시그니처 cluster_id→cluster_ctx
+[2026-06-24 14:30:05] [완료] Phase 6: prompts/diagnosis.py 클러스터 라인 "패턴 클러스터: {cluster_ctx}"로 변경
+[2026-06-24 14:30:06] [완료] Phase 6: tests/cluster/test_cluster.py 검증 테스트 2건 추가(E111, misc)
+[2026-06-24 14:30:07] [검증] Phase 6: 응답 clusterId 정수 불변 확인, 전체 pytest 35건 통과
+[2026-06-24 14:30:08] [검증] Phase 6: 라이브 cluster_ctx 확인 — E111→"클러스터 3 커널 종료/패닉군...", unknown→"클러스터 99 미분류..."
+[2026-06-24 14:22:30] [진행중] Tool②LLM컨텍스트개선 착수: 주입 범위 확정 — impact/action/category 주입, event_template·socket·processor·importance 제외
+[2026-06-24 14:22:31] [진행중] Tool②LLM컨텍스트개선: .agents/llm_context_plan.md plan-doc 작성 중
+[2026-06-24 14:22:32] [진행중] Tool②LLM컨텍스트개선: gatekeeper 중간관리자 검토 대기
+[2026-06-24 14:22:40] [완료] Tool②LLM컨텍스트개선: graph.py llm_node가 run_diagnosis에 category/impact/action 전달(이상 경로)
+[2026-06-24 14:22:41] [완료] Tool②LLM컨텍스트개선: graph.py llm_node가 run_normal_reason에 category/impact 전달(정상 경로)
+[2026-06-24 14:22:42] [완료] Tool②LLM컨텍스트개선: diagnosis_agent run_diagnosis 시그니처에 category/impact/action_hint 키워드 인자 추가(기본값 호환)
+[2026-06-24 14:22:43] [완료] Tool②LLM컨텍스트개선: diagnosis_agent run_normal_reason 시그니처에 category/impact 추가
+[2026-06-24 14:22:44] [완료] Tool②LLM컨텍스트개선: prompts USER_PROMPT_TEMPLATE에 도메인분류/장애영향/권장대응 라인 추가
+[2026-06-24 14:22:45] [완료] Tool②LLM컨텍스트개선: prompts NORMAL_USER_PROMPT_TEMPLATE에 정상 컨텍스트(분류/정상근거) 추가
+[2026-06-24 14:22:46] [완료] Tool②LLM컨텍스트개선: SYSTEM_PROMPT/NORMAL_SYSTEM_PROMPT에 impact/action echo 방지 지시 추가
+[2026-06-24 14:22:47] [완료] Tool②LLM컨텍스트개선: event_template·socket·processor·importance 의도적 제외(미주입 확정)
+[2026-06-24 14:22:48] [완료] Tool②LLM컨텍스트개선: tests 주입 검증 2건 추가(이상/정상 경로)
+[2026-06-24 14:22:49] [검증] Tool②LLM컨텍스트개선: 전체 pytest 37건 통과, 응답 스키마 불변 확인

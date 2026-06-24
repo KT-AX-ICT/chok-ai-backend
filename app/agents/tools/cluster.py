@@ -26,6 +26,14 @@ class ClusterResult(BaseModel):
         description="단일 배정 성공 여부. 0개 매핑(미분류)도 True, "
         "2개 이상(다중 배정 모호)만 False.",
     )
+    cluster_title: str | None = Field(
+        default=None,
+        description="clusters.json 의 cluster_title. LLM 프롬프트 컨텍스트용.",
+    )
+    description: str | None = Field(
+        default=None,
+        description="clusters.json 의 description. LLM 프롬프트 컨텍스트용.",
+    )
 
 
 class ClusterAssigner:
@@ -36,8 +44,14 @@ class ClusterAssigner:
             clusters = list(_load_clusters())
         # event_id 가 여러 클러스터에 걸칠 수 있으므로 cluster_id 집합으로 보관한다.
         self._index: dict[str, set[int]] = {}
+        # cluster_id -> (cluster_title, description) 메타 조회용
+        self._meta: dict[int, tuple[str | None, str | None]] = {}
         for cluster in clusters:
             cluster_id = cluster["id"]
+            self._meta[cluster_id] = (
+                cluster.get("cluster_title"),
+                cluster.get("description"),
+            )
             for entry in cluster.get("event_template", []):
                 self._index.setdefault(entry["event_id"], set()).add(cluster_id)
 
@@ -45,12 +59,22 @@ class ClusterAssigner:
         cluster_ids = self._index.get(event_id, set())
         if len(cluster_ids) == 1:
             # 단일 클러스터에 명확히 배정.
-            return ClusterResult(cluster_id=next(iter(cluster_ids)), matched=True)
+            cid = next(iter(cluster_ids))
+            title, desc = self._meta.get(cid, (None, None))
+            return ClusterResult(
+                cluster_id=cid,
+                matched=True,
+                cluster_title=title,
+                description=desc,
+            )
         # 0개(미커버·unknown) → 미분류이지만 배정 가능 → matched=True
         # 2개 이상(다중 배정) → 단일 배정 불가 → matched=False
+        title, desc = self._meta.get(MISC_CLUSTER_ID, (None, None))
         return ClusterResult(
             cluster_id=MISC_CLUSTER_ID,
             matched=len(cluster_ids) == 0,
+            cluster_title=title,
+            description=desc,
         )
 
 

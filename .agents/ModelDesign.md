@@ -177,12 +177,14 @@ class LogAnalyzeResponse(CamelModel):
 
 ```python
 class LogBatchAnalyzeRequest(CamelModel):
-    logs: list[LogAnalyzeRequest] = Field(min_length=1)
+    logs: list[LogAnalyzeRequest] = Field(min_length=1, max_length=400)
 ```
 
 | 속성 | 별칭 | 타입 | 필수 | 제약/설명 |
 |------|------|------|:---:|-----------|
-| logs | logs | list[`LogAnalyzeRequest`] | ✔ | 최소 1건. 원소는 단건 요청 모델 재사용 |
+| logs | logs | list[`LogAnalyzeRequest`] | ✔ | **1~400건**. 0건·401건 이상은 `422 VALIDATION_ERROR`. 원소는 단건 요청 모델 재사용 |
+
+> **건수 상한 400 근거**: 모든 로그가 LLM을 1회씩 타므로 배치당 LLM 호출 = 건수. 내부 동시성 8·전체 타임아웃 5분에서 400건이 명목 ~2.5분으로 안전하게 처리된다(상한을 넘기면 5분 예산 초과 위험). 동시성·타임아웃 상세는 [step4_agent.md](step4_agent.md) 4-7 참조.
 
 ### 2-5. 다건 응답 — `LogBatchResultItem` / `LogBatchAnalyzeResponse`
 

@@ -74,3 +74,44 @@ if an.is_anomaly:
 - `metadata/` — 판정에 사용하는 메타데이터 파일 (별도 README 참고)
 - 통합 검증: `tests/integration/test_pipeline_bgl_2k.py` (①→②→③ 전건 채점),
   `tests/pipeline_scenarios/test_total_tool_scenarios.py` (①→②→③→④ 시나리오)
+
+---
+
+## Tool 입출력 및 LLM 컨텍스트 주입 현황
+
+4개 Tool은 모두 **결정적 규칙 기반**(LLM·벡터DB 미사용, 내부 JSON 메타데이터 참조)이다.
+①의 `event_id`가 ②③의 입력이 되고, 산출 일부가 LangGraph `llm_node`에서 **LLM 프롬프트 컨텍스트**로 주입된다.
+"LLM 주입" 열은 현재 이상 경로 프롬프트(`prompts/diagnosis.py` `USER_PROMPT_TEMPLATE`)에 실제로 들어가는지를 의미한다.
+
+| Tool | 입력 | 출력 필드 | 의미 | LLM 주입 |
+| --- | --- | --- | --- | :---: |
+| **① event_template** | `content` (로그 본문) | `event_id` | 이벤트 식별자 | ✅ (이벤트 ID) |
+| | | `event_template` | 매칭된 정규 템플릿 문자열 | ❌ |
+| | | `matched` | 템플릿 매칭 성공 여부 | ❌ |
+| **② anomaly_classifier** | `event_id` (①산출) | `is_anomaly` | 이상 여부(bool) | ✅ (분기·`isAbnormal`) |
+| | | `urgency` | 긴급도(영문 Critical/High/Mid/Low) | ✅ (`risk_level`로 변환) |
+| | | `category` | 도메인 분류(HARDWARE/KERN/NETWORK/FILESYSTEM/APP/UNKNOWN) | ❌ |
+| | | `impact` | 장애 영향 범위(설명 텍스트) | ❌ |
+| | | `action` | 권장 대응 조치(설명 텍스트) | ❌ |
+| **③ cluster** | `event_id` (①산출) | `cluster_id` | 클러스터 ID(int, 미분류=99) | ✅ (`clusterId` + `cluster_ctx`) |
+| | | `matched` | 단일 매칭 성공 여부 | ❌ |
+| | | `cluster_title` | 클러스터 제목 | ✅ (`cluster_ctx`) |
+| | | `description` | 클러스터 설명 | ✅ (`cluster_ctx`) |
+| **④ node_info** | `node_id` (요청 `node`) | `node_metadata.rack` | 랙 | ✅ (`node_ctx`) |
+| | | `node_metadata.midplane` | 미드플레인 | ✅ (`node_ctx`) |
+| | | `node_metadata.node_slot` | 노드 슬롯 | ✅ (`node_ctx`) |
+| | | `node_metadata.node_role` | 노드 역할(Compute/IO) | ✅ (`node_ctx`) |
+| | | `node_metadata.socket_position` | 소켓 위치 | ❌ |
+| | | `node_metadata.processor_unit` | 프로세서 유닛 | ❌ |
+| | | `alert_stats.alert_pct` | 과거 이상 발생 비율(%) | ✅ (`node_ctx`) |
+
+> 정상 경로(`NORMAL_USER_PROMPT_TEMPLATE`)는 로그 본문·`event_id`만 사용하며 ③④·② 컨텍스트는 주입하지 않는다(정상은 ③④ 미실행).
+
+### 주입 검토 (미주입 산출 중 후보)
+
+- **② `impact` (장애 영향) · `action` (권장 대응)** — 설계상(`step4_agent.md` 4-2/4-6) **LLM 프롬프트 컨텍스트로 의도된 값**이나 현재 `llm_node`→`run_diagnosis`에 전달되지 않는다. State(`impact`/`action_ctx`)에는 보관되나 프롬프트 미주입 → **주입 권장(우선순위 높음)**.
+- **② `category` (도메인 분류)** — 분석 프레이밍에 유용. 주입 시 LLM이 하드웨어/커널/네트워크 등 분류를 근거로 활용 가능 → **주입 검토(중)**.
+- **① `event_template`** — 정규화된 대표 메시지. `event_id`만으로 부족할 때 보강용 → **주입 검토(하)**.
+- **④ `socket_position`/`processor_unit`** — 세부 하드웨어 위치. 데이터 변별력 낮아 선택적 → **검토(하)**.
+- **③ `cluster.importance`** — 분석에 불필요하여 **의도적으로 컨텍스트에서 제외**(주입 안 함).
+- `matched`(①③), `cluster_matched`, `is_anomaly` 외 메타 플래그는 LLM 근거 작성에 불필요하여 미주입 유지.
