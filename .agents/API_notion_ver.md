@@ -4,22 +4,24 @@
 
 - FastAPI는 로그를 분석하는 역할만 담당하고, RDBMS 관리는 Spring이 전담
 - Spring은 `level='FATAL'`이면서 아직 `log_analysis`가 없는 로그만 모아 FastAPI로 보냄 (FATAL 1차 필터)
-- `status`는 FastAPI에서 이상/정상 로그 판단한 결과. (`true` = 이상 로그 / `false` = 정상 로그)
-- 분석 컨텍스트는 **4개 Tool**이 산출
+- 들어오는 로그는 **확정된 이상 로그가 아니다.** Spring에서 레벨 기반(FATAL) 1차 필터만 통과한 상태이므로, **이상 여부 판단까지 AI 내부에서 수행**한 뒤 분석 결과를 생성
+- `isAbnormal`은 FastAPI에서 이상/정상 로그 판단한 결과. (`true` = 이상 로그 / `false` = 정상 로그)
+- 분석 컨텍스트는 **4개 Tool**이 산출 (ChromaDB 대신 **내부 정의 문서를 직접 참조**)
 — ① 이벤트 템플릿 분류
 — ② 이상 여부 판단 + 긴급도 분류
 — ③ 클러스터(패턴) 분류
 — ④ Node 정보 조회 Tool
+- **실행 순서:** ① → ② 수행 후 ②의 판정으로 **분기**. **이상**이면 ③·④ 수행, **정상**이면 ③④ 건너뜀
 - Tool이 도출한 결과는 LLM이 다시 판단하지 않고 그대로 응답에 실으며, LLM은 그 값들을 맥락으로 받아 `summary`/`analysis`/`action` 텍스트만 작성
 - `domain`은 **BGL 고정값**으로 **요청에만** 포함되고 응답에는 싣지 않음
 - **[참고] Agent 구성도**
     
-    !agent_architecture_v3.png
+    !agent_architecture_v6.png
     
 
 ## 2. 공통 사항
 
-Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yyyy-MM-dd HH:mm:ss` 형식 문자열. 인증 방식은 미정(보류).
+Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yyyy-MM-dd HH:mm:ss` 형식 문자열 (요청 `occurredAt`, 응답 `analyzedAt`). 인증 방식은 미정(보류).
 
 ## 3. 엔드포인트 요약
 
@@ -43,7 +45,7 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
   "nodeRepeat": "string",
   "component": "string",
   "logType": "string",
-  "logTs": "string",
+  "occurredAt": "string",
   "logLevel": "string",
   "content": "string",
   "domain": "string"
@@ -57,7 +59,7 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
 | nodeRepeat | str | 로그 전달 노드 | R02-M1-N0-C:J12-U11 |
 | component | str | 컴포넌트 | KERNEL, APP, … |
 | logType | str | 로그 타입 | RAS, … |
-| logTs | str | 로그 타임스탬프 (`yyyy-MM-dd HH:mm:ss` 형식 문자열) |  |
+| occurredAt | str | 로그 발생 시각 (`yyyy-MM-dd HH:mm:ss` 형식 문자열) |  |
 | logLevel | str | 로그 레벨 | FATAL, ERROR, … |
 | content | str | 로그 내용 |  |
 | domain | str | 도메인 | **BGL 고정값** (요청 입력, 응답 미포함) |
@@ -65,13 +67,13 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
 ### Response
 
 - `result`는 정상·이상인 경우 모두 포함.
-- **`정상`이면** `summary`·`analysis`에 정상 사유만 담기고, `action`은 `""`, `eventId`·`riskLevel`·`clusterId`는 `null`
-- 아래 예시는 **`이상`**인 경우
+- **`정상`(`isAbnormal: false`)이면** `summary`·`analysis`에 정상 사유만 담기고, `action`은 `""`, `eventId`·`riskLevel`·`clusterId`는 `null`
+- 아래 예시는 **`이상`(`isAbnormal: true`)**인 경우
 
 ```json
 {
   "logId": 0,
-  "status": true | false,
+  "isAbnormal": true,
   "result": {
     "eventId": "string",
     "riskLevel": "string",
@@ -88,14 +90,14 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
 | logId | int | 분석 대상 로그 식별자 |
-| status | bool | 이상 여부 (`true`=이상 / `false`=정상) |
+| isAbnormal | bool | 이상 여부 (`true`=이상 / `false`=정상) |
 | result | object | 분석 결과 (정상·이상 모두 포함) |
-| result.eventId | str | null | 이벤트 식별자 (`정상`이면 `null`) |
-| result.riskLevel | str | null | 위험도 (`긴급` / `높음` / `보통` / `낮음`). `정상`이면 `null` |
+| result.eventId | str \| null | 이벤트 식별자 (`정상`이면 `null`) |
+| result.riskLevel | str \| null | 위험도 (`긴급` / `높음` / `보통` / `낮음`). `정상`이면 `null` |
 | result.summary | str | 요약 — `정상`이면 정상 사유 |
 | result.analysis | str | 분석 내용 — `정상`이면 정상 사유 |
 | result.action | str | 대응 방안 (`정상`이면 `""`) |
-| result.clusterId | int | null | 클러스터 식별자 (`정상`이면 `null`) |
+| result.clusterId | int \| null | 클러스터 식별자 (`정상`이면 `null`) |
 | result.analyzedAt | str | 분석/판정 시각 (`yyyy-MM-dd HH:mm:ss` 문자열) |
 | processingTimeMs | int | 처리 소요 시간 (ms) |
 
@@ -107,10 +109,10 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
 - 개별 로그 실패가 전체 배치를 막지 않음
 - 아래 필드명 구분 필요
     - **`processStatus`**(처리 완료 여부, `success`/`fail`)
-    - **`status`**(이상 로그 여부, `true`/`false`)
+    - **`isAbnormal`**(이상 로그 여부, `true`/`false`)
 - 조건에 따라 반환 필드 달라짐
     - 처리 실패면 `errorMessage`만 반환
-    - 성공 - 이상 로그면 `status`와 `result`(`eventId` 포함) 반환
+    - 성공 - 이상 로그면 `isAbnormal`과 `result`(`eventId` 포함) 반환
     - 성공 - 정상 로그면 `result` 일부 필드만 반환
 
 ### Request
@@ -124,7 +126,7 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
       "nodeRepeat": "string",
       "component": "string",
       "logType": "string",
-      "logTs": "string",
+      "occurredAt": "string",
       "logLevel": "string",
       "content": "string",
       "domain": "string"
@@ -147,7 +149,7 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
     {
       "logId": 0,
       "processStatus": "success",
-      "status": true | false,
+      "isAbnormal": true,
       "result": {
         "eventId": "string",
         "riskLevel": "string",
@@ -174,8 +176,9 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
 | results | array | 로그별 분석 결과 배열 |
 | results[].logId | int | 로그 식별자 |
 | results[].processStatus | str | 처리 완료 여부 (`success` / `fail`) |
-| results[].status | bool | null | 이상 여부 (`true`=이상 / `false`=정상). 처리 실패 시 null |
-| results[].result | object | null | • 성공·`이상`이면 분석 결과 (eventId, riskLevel, summary, analysis, action, clusterId, analyzedAt)<br>• 성공·`정상`이면 일부 필드만(summary·analysis; eventId·riskLevel·clusterId는 null)<br>• 처리 실패 시 null |
+| results[].isAbnormal | bool \| null | 이상 여부 (`true`=이상 / `false`=정상). 처리 실패 시 null |
+| results[].result | object \| null | • 성공·`이상`이면 분석 결과 (eventId, riskLevel, summary, analysis, action, clusterId, analyzedAt)<br>• 성공·`정상`이면 일부 필드만(summary·analysis; eventId·riskLevel·clusterId는 null)<br>• 처리 실패 시 null |
+| results[].result.eventId | str \| null | 이벤트 식별자 (`정상`이면 null) |
 | results[].errorMessage | str | 처리 실패 시 오류 메시지 |
 
 ---
@@ -236,7 +239,7 @@ Base URL은 `/ai/v1`, `Content-Type`은 `application/json`, 시각 필드는 `yy
     {
       "logId": 1,
       "processStatus": "success",
-      "status": true,
+      "isAbnormal": true,
       "result": {
         "eventId": "string",
         "riskLevel": "높음",
