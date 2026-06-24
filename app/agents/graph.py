@@ -201,7 +201,9 @@ async def map_node(state: AgentState) -> dict:
         )
         # 이상인데 긴급도 비어있으면 안전 기본값
         risk_level = risk_level or "보통"
-        event_id: str | None = state["event_id"]
+        # 템플릿 미매칭(이상)도 정상과 동일하게 eventId=null로 정규화.
+        # API.md 계약(str|null)에 "unknown"은 미정의 → 센티넬 대신 Tool① 플래그 사용.
+        event_id: str | None = state["event_id"] if state.get("template_matched") else None
         cluster_id: int | None = state.get("cluster_id", 99)
     else:
         risk_level = None
