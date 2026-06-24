@@ -32,7 +32,11 @@ def make_log(log_id: int = 10293, log_level: str = "FATAL") -> dict:
         "occurredAt": "2005-06-04 00:24:32",
         "domain": "BGL",
         "logLevel": log_level,
-        "content": "ciod: failed to read message prefix on control stream",
+        # Tool① 템플릿 E33(ciod 제어 스트림 실패) → Tool③ cluster 2 에 매칭되는 본문
+        "content": (
+            "ciod: failed to read message prefix on control stream "
+            "(CioStream socket to 172.16.96.116:33425"
+        ),
     }
 
 
@@ -73,8 +77,25 @@ def test_analyze_abnormal_success(monkeypatch) -> None:
     assert result["riskLevel"] == "보통"           # unknown event → Tool② Mid → 보통
     assert result["summary"] == "요약"
     assert result["action"] == "대응"
-    assert isinstance(result["clusterId"], int)
+    assert result["clusterId"] == 2                # Tool③ 클러스터 매칭
     assert TS_RE.match(result["analyzedAt"])       # KST 포맷
+
+
+# ──────────────────────────────────────────────
+# 단건 — 템플릿 미매칭 (eventId=null, cluster=미분류)
+# ──────────────────────────────────────────────
+
+def test_analyze_unmatched_template_event_id_null(monkeypatch) -> None:
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    log = make_log()
+    log["content"] = "totally novel fatal message never seen before"
+    r = client.post("/ai/v1/analyze", json=log)
+    assert r.status_code == 200
+    body = r.json()
+
+    assert body["result"]["eventId"] is None       # 미매칭 → null (bgl_log.event_id NULL 허용)
+    assert body["result"]["clusterId"] == 99        # 미분류 버킷
 
 
 # ──────────────────────────────────────────────
@@ -345,7 +366,7 @@ def test_tool_integration_unknown_content_fallback(monkeypatch) -> None:
 
     assert body["isAbnormal"] is True
     result = body["result"]
-    assert result["eventId"] == "unknown"      # Tool① fallback 확인
+    assert result["eventId"] is None           # 미매칭 → null (명세 str|null; "unknown"은 미정의)
     assert result["riskLevel"] == "보통"       # unknown → Mid → 보통
     assert result["clusterId"] == 99           # Tool③ 미분류 확인
 

@@ -99,8 +99,8 @@ P0 범위는 다음 흐름을 우선합니다.
 - pydantic-settings 기반 공통 설정
 - 패키지별 담당/책임 README
 - 분석 endpoint (`POST /ai/v1/analyze`, `POST /ai/v1/analyze/batch`)
-- Spring-FastAPI 요청/응답 DTO (camelCase 계약, 정상/이상 status 포함)
-- 이상 로그 근거 설명 / 정상 사유 Agent (`diagnosis_agent`)
+- Spring-FastAPI 요청/응답 DTO (camelCase 계약, 응답 is_abnormal(bool) 포함)
+- 이상 로그 근거 설명 / 정상 사유 Agent
 - OpenAI(LLM) 연동 및 구조화 출력
 - LangGraph 분석 파이프라인 (`app/agents/graph.py`)
 - 분석 Tool 구현: 이상 판정(`anomaly_classifier`) · 반복 패턴 클러스터(`cluster`) · 이벤트 템플릿(`event_template`) · 노드 정보 조회(`node_info`) + 메타데이터(`clusters`/`event_analysis_v2`/`event_template`/`node_stats`)
