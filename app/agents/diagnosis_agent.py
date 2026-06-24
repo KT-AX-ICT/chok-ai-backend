@@ -29,11 +29,12 @@ from app.schemas.analysis import AnalyzeRequest, RiskLevel
 
 
 class DiagnosisOutput(BaseModel):
-    """이상 로그 — LLM이 채우는 텍스트 3필드."""
+    """이상 로그 — LLM이 채우는 텍스트 4필드."""
 
     summary: str = Field(..., min_length=1, description="이상 상황 한 문장 요약")
     analysis: str = Field(..., min_length=1, description="원인 분석 (추정 여부 명시)")
     action: str = Field(..., min_length=1, description="대응 방안")
+    reason: str = Field(..., min_length=1, description="사람이 읽을 수 있는 판정 근거 (응답 미노출, 내부 근거용)")
 
 
 class NormalReasonOutput(BaseModel):
@@ -59,15 +60,20 @@ def _structured_llm(schema: type[BaseModel]):
         temperature=settings.llm_temperature,
         # max_tokens의 alias (langchain-openai). pyright/런타임 모두 호환
         max_completion_tokens=settings.llm_max_tokens,
+        max_retries=settings.llm_max_retries,   # 지수 백오프 (429/5xx 대응)
     )
     return llm.with_structured_output(schema)
 
 
 async def _ainvoke(schema: type[BaseModel], messages: list[BaseMessage]):
-    """구조화 LLM 호출 — 타임아웃은 503, 그 외 실패는 502로 변환."""
+    """구조화 LLM 호출 — 개별 타임아웃(llm_call_timeout_s)은 503, 그 외 실패는 502로 변환."""
+    settings = get_settings()
     structured = _structured_llm(schema)
     try:
-        return await structured.ainvoke(messages)
+        return await asyncio.wait_for(
+            structured.ainvoke(messages),
+            timeout=settings.llm_call_timeout_s,
+        )
     except (asyncio.TimeoutError, TimeoutError) as e:
         raise LLMTimeoutError("LLM 응답 지연/타임아웃", str(e)) from e
     except Exception as e:

@@ -36,14 +36,13 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 )
 async def analyze_single(request: AnalyzeRequest) -> AnalyzeResponse:
     start = time.perf_counter()
-    event_id, status, result = await analyze_single_log(request)
+    status, result = await analyze_single_log(request)
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
     return AnalyzeResponse(
         log_id=request.log_id,
-        event_id=event_id,
         is_abnormal=(status == "이상"),   # 응답 경계에서 변환 (내부 status 유지)
-        result=result,
+        result=result,                    # eventId는 result 내부에 포함
         processing_time_ms=elapsed_ms,
     )
 
@@ -51,11 +50,11 @@ async def analyze_single(request: AnalyzeRequest) -> AnalyzeResponse:
 @router.post(
     "/analyze/batch",
     response_model=BatchAnalyzeResponse,
-    summary="로그 다건 분석 (스케줄러 기본 경로, 최대 500건)",
+    summary="로그 다건 분석 (스케줄러 기본 경로, 최대 400건)",
     responses=_ERROR_RESPONSES,
 )
 async def analyze_batch(request: BatchAnalyzeRequest) -> BatchAnalyzeResponse:
-    # 배치 건수 초과(>500)는 BatchAnalyzeRequest.max_length 검증으로 422 처리됨
+    # 배치 건수 초과(>400)는 BatchAnalyzeRequest.max_length 검증으로 422 처리됨
     start = time.perf_counter()
     results = await analyze_batch_logs(request.logs)
     elapsed_ms = int((time.perf_counter() - start) * 1000)

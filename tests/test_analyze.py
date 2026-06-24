@@ -18,8 +18,8 @@ client = TestClient(app, raise_server_exceptions=False)
 # KST "yyyy-MM-dd HH:mm:ss"
 TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
 
-# 서비스가 import한 이름 경로 (monkeypatch 대상)
-SVC = "app.services.analysis_service"
+# 그래프 모듈 경로 (monkeypatch 대상 — Tool/LLM 호출은 graph.py에서 발생)
+GRAPH = "app.agents.graph"
 
 
 def make_log(log_id: int = 10293, log_level: str = "FATAL") -> dict:
@@ -41,6 +41,7 @@ async def _fake_diagnosis(*args, **kwargs) -> dict:
         "summary": "요약",
         "analysis": "분석",
         "action": "대응",
+        "reason": "근거",
     }
 
 
@@ -56,7 +57,7 @@ async def _fake_normal_reason(*args, **kwargs) -> dict:
 # ──────────────────────────────────────────────
 
 def test_analyze_abnormal_success(monkeypatch) -> None:
-    monkeypatch.setattr(f"{SVC}.run_diagnosis", _fake_diagnosis)
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
 
     r = client.post("/ai/v1/analyze", json=make_log())
     assert r.status_code == 200
@@ -64,12 +65,12 @@ def test_analyze_abnormal_success(monkeypatch) -> None:
 
     # 최상위 camelCase 계약
     assert body["logId"] == 10293
-    assert body["eventId"]  # Tool① stub
     assert body["isAbnormal"] is True
     assert isinstance(body["processingTimeMs"], int)
 
     result = body["result"]
-    assert result["riskLevel"] == "긴급"          # FATAL → Tool② stub
+    assert result["eventId"]                       # Tool① (이상이면 값 있음)
+    assert result["riskLevel"] == "보통"           # unknown event → Tool② Mid → 보통
     assert result["summary"] == "요약"
     assert result["action"] == "대응"
     assert isinstance(result["clusterId"], int)
@@ -81,11 +82,20 @@ def test_analyze_abnormal_success(monkeypatch) -> None:
 # ──────────────────────────────────────────────
 
 def test_analyze_normal_path(monkeypatch) -> None:
-    async def fake_status(log, event_id):
-        return "정상", None
+    from app.agents.tools.anomaly_classifier import AnomalyResult, Urgency
 
-    monkeypatch.setattr(f"{SVC}.classify_status_urgency", fake_status)
-    monkeypatch.setattr(f"{SVC}.run_normal_reason", _fake_normal_reason)
+    def fake_classify_anomaly(event_id):
+        return AnomalyResult(
+            event_id=event_id,
+            is_anomaly=False,
+            urgency=Urgency.LOW,
+            category="APP",
+            impact="정상 동작",
+            action=None,
+        )
+
+    monkeypatch.setattr(f"{GRAPH}.classify_anomaly", fake_classify_anomaly)
+    monkeypatch.setattr(f"{GRAPH}.run_normal_reason", _fake_normal_reason)
 
     r = client.post("/ai/v1/analyze", json=make_log())
     assert r.status_code == 200
@@ -93,6 +103,7 @@ def test_analyze_normal_path(monkeypatch) -> None:
 
     assert body["isAbnormal"] is False
     result = body["result"]
+    assert result["eventId"] is None               # 정상 → null
     assert result["riskLevel"] is None             # 정상 → null
     assert result["clusterId"] is None             # 정상 → null
     assert result["action"] == ""                  # 정상 → ""
@@ -114,7 +125,7 @@ def test_analyze_llm_error_maps_502(monkeypatch) -> None:
     async def boom(*a, **k):
         raise LLMError("호출 실패")
 
-    monkeypatch.setattr(f"{SVC}.run_diagnosis", boom)
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", boom)
 
     r = client.post("/ai/v1/analyze", json=make_log())
     assert r.status_code == 502
@@ -125,7 +136,7 @@ def test_analyze_llm_timeout_maps_503(monkeypatch) -> None:
     async def slow(*a, **k):
         raise LLMTimeoutError("타임아웃")
 
-    monkeypatch.setattr(f"{SVC}.run_diagnosis", slow)
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", slow)
 
     r = client.post("/ai/v1/analyze", json=make_log())
     assert r.status_code == 503
@@ -140,9 +151,9 @@ def test_batch_partial_failure(monkeypatch) -> None:
     async def diagnosis_by_id(log, *a, **k):
         if log.log_id == 2:
             raise LLMError("이 건만 실패")
-        return {"summary": "요약", "analysis": "분석", "action": "대응"}
+        return {"summary": "요약", "analysis": "분석", "action": "대응", "reason": "근거"}
 
-    monkeypatch.setattr(f"{SVC}.run_diagnosis", diagnosis_by_id)
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", diagnosis_by_id)
 
     payload = {"logs": [make_log(1), make_log(2), make_log(3)]}
     r = client.post("/ai/v1/analyze/batch", json=payload)
@@ -157,7 +168,7 @@ def test_batch_partial_failure(monkeypatch) -> None:
     assert by_id[1]["result"] is not None
 
     assert by_id[2]["processStatus"] == "fail"
-    assert by_id[2]["error"] == "LLMError"
+    assert by_id[2]["errorMessage"] == "LLMError"
     assert by_id[2]["result"] is None
 
 
@@ -167,9 +178,245 @@ def test_batch_empty_is_422() -> None:
     assert r.json()["code"] == "VALIDATION_ERROR"
 
 
-@pytest.mark.parametrize("size", [501, 600])
+@pytest.mark.parametrize("size", [401, 500])
 def test_batch_over_limit_is_422(size: int) -> None:
     payload = {"logs": [make_log(i) for i in range(size)]}
     r = client.post("/ai/v1/analyze/batch", json=payload)
     assert r.status_code == 422
     assert r.json()["code"] == "VALIDATION_ERROR"
+
+
+# ──────────────────────────────────────────────
+# Phase 5-1: 분기 테스트 — cluster/node_info 실행 여부
+# ──────────────────────────────────────────────
+
+def test_branch_normal_skips_cluster_and_node_info(monkeypatch) -> None:
+    """정상(is_anomaly=False) 경로: cluster_node·node_info_node 가 실행되지 않는다.
+
+    classify_anomaly를 is_anomaly=False 반환으로, assign_cluster·get_node_info를 spy로,
+    LLM을 fake로 monkeypatch한 뒤 호출 횟수 0을 assert한다.
+    """
+    from app.agents.tools.anomaly_classifier import AnomalyResult, Urgency
+
+    # ① 정상 판정으로 고정
+    def fake_classify_anomaly(event_id):
+        return AnomalyResult(
+            event_id=event_id,
+            is_anomaly=False,
+            urgency=Urgency.LOW,
+            category="APP",
+            impact="정상 동작",
+            action=None,
+        )
+
+    cluster_calls: list[str] = []
+    node_info_calls: list[str] = []
+
+    def spy_assign_cluster(event_id):
+        cluster_calls.append(event_id)
+        from app.agents.tools.cluster import ClusterResult
+        return ClusterResult(cluster_id=99, matched=False)
+
+    def spy_get_node_info(node_id):
+        node_info_calls.append(node_id)
+        from app.agents.tools.node_info import AlertStats, NodeInfoResult, NodeMetadata
+        return NodeInfoResult(
+            node_metadata=NodeMetadata(),
+            alert_stats=None,
+        )
+
+    monkeypatch.setattr(f"{GRAPH}.classify_anomaly", fake_classify_anomaly)
+    monkeypatch.setattr(f"{GRAPH}.assign_cluster", spy_assign_cluster)
+    monkeypatch.setattr(f"{GRAPH}.get_node_info", spy_get_node_info)
+    monkeypatch.setattr(f"{GRAPH}.run_normal_reason", _fake_normal_reason)
+
+    r = client.post("/ai/v1/analyze", json=make_log())
+    assert r.status_code == 200
+    assert r.json()["isAbnormal"] is False
+
+    assert cluster_calls == [], f"정상 경로에서 assign_cluster가 {len(cluster_calls)}회 호출됨"
+    assert node_info_calls == [], f"정상 경로에서 get_node_info가 {len(node_info_calls)}회 호출됨"
+
+
+def test_branch_anomaly_runs_cluster_and_node_info(monkeypatch) -> None:
+    """이상(is_anomaly=True) 경로: cluster_node·node_info_node 가 각 1회 실행된다.
+
+    classify_anomaly를 is_anomaly=True 반환으로, assign_cluster·get_node_info를 spy로,
+    LLM을 fake로 monkeypatch한 뒤 각 1회 호출됨을 assert한다.
+    """
+    from app.agents.tools.anomaly_classifier import AnomalyResult, Urgency
+
+    # ① 이상 판정으로 고정
+    def fake_classify_anomaly(event_id):
+        return AnomalyResult(
+            event_id=event_id,
+            is_anomaly=True,
+            urgency=Urgency.CRITICAL,
+            category="HARDWARE",
+            impact="하드웨어 장애",
+            action="서버 점검",
+        )
+
+    cluster_calls: list[str] = []
+    node_info_calls: list[str] = []
+
+    def spy_assign_cluster(event_id):
+        cluster_calls.append(event_id)
+        from app.agents.tools.cluster import ClusterResult
+        return ClusterResult(cluster_id=0, matched=True)
+
+    def spy_get_node_info(node_id):
+        node_info_calls.append(node_id)
+        from app.agents.tools.node_info import NodeInfoResult, NodeMetadata
+        return NodeInfoResult(
+            node_metadata=NodeMetadata(rack="R04"),
+            alert_stats=None,
+        )
+
+    monkeypatch.setattr(f"{GRAPH}.classify_anomaly", fake_classify_anomaly)
+    monkeypatch.setattr(f"{GRAPH}.assign_cluster", spy_assign_cluster)
+    monkeypatch.setattr(f"{GRAPH}.get_node_info", spy_get_node_info)
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    r = client.post("/ai/v1/analyze", json=make_log())
+    assert r.status_code == 200
+    assert r.json()["isAbnormal"] is True
+
+    assert len(cluster_calls) == 1, f"이상 경로에서 assign_cluster 호출 횟수: {len(cluster_calls)} (기대: 1)"
+    assert len(node_info_calls) == 1, f"이상 경로에서 get_node_info 호출 횟수: {len(node_info_calls)} (기대: 1)"
+
+
+# ──────────────────────────────────────────────
+# Phase 5-2: Tool 실연동 통합 테스트 (LLM만 fake)
+# ──────────────────────────────────────────────
+
+def make_log_with_content(content: str, node: str = "R04-M1-N4", log_id: int = 1) -> dict:
+    """content·node를 지정할 수 있는 로그 생성 헬퍼."""
+    return {
+        "logId": log_id,
+        "node": node,
+        "nodeRepeat": node,
+        "component": "APP",
+        "logType": "RAS",
+        "occurredAt": "2005-06-04 00:24:32",
+        "domain": "BGL",
+        "logLevel": "FATAL",
+        "content": content,
+    }
+
+
+def test_tool_integration_known_event_anomaly(monkeypatch) -> None:
+    """알려진 이상 event_id(E52 = 'data storage interrupt'): 실제 Tool①②③④ 연동 확인.
+
+    LLM(run_diagnosis)만 fake로 교체. event_id, cluster_id, is_anomaly가 메타데이터
+    기반으로 올바르게 채워짐을 검증한다.
+    """
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    r = client.post(
+        "/ai/v1/analyze",
+        json=make_log_with_content("data storage interrupt", node="R30-M0-N9-C:J16-U01"),
+    )
+    assert r.status_code == 200
+    body = r.json()
+
+    assert body["isAbnormal"] is True
+    result = body["result"]
+    assert result["eventId"] == "E52"          # Tool① 실연동 확인
+    assert result["riskLevel"] == "긴급"       # E52 → Critical → 긴급
+    assert isinstance(result["clusterId"], int) # Tool③ 실연동 확인 (cluster 0)
+    assert result["clusterId"] == 0
+
+
+def test_tool_integration_unknown_content_fallback(monkeypatch) -> None:
+    """미등록 content → event_id=unknown → is_anomaly=True(Mid) fallback 동작 확인.
+
+    LLM(run_diagnosis)만 fake. unknown event_id가 anomaly=True/Mid로 처리되고
+    cluster_id=99(미분류)가 반환됨을 검증한다.
+    """
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    r = client.post(
+        "/ai/v1/analyze",
+        json=make_log_with_content("this is not a real bgl log at all"),
+    )
+    assert r.status_code == 200
+    body = r.json()
+
+    assert body["isAbnormal"] is True
+    result = body["result"]
+    assert result["eventId"] == "unknown"      # Tool① fallback 확인
+    assert result["riskLevel"] == "보통"       # unknown → Mid → 보통
+    assert result["clusterId"] == 99           # Tool③ 미분류 확인
+
+
+def test_tool_integration_known_event_normal(monkeypatch) -> None:
+    """알려진 정상 event_id(E77 = 'instruction cache parity error corrected'): 정상 경로 확인.
+
+    LLM(run_normal_reason)만 fake. is_anomaly=False, cluster/node_info 관련 필드가
+    None임을 검증한다.
+    """
+    monkeypatch.setattr(f"{GRAPH}.run_normal_reason", _fake_normal_reason)
+
+    r = client.post(
+        "/ai/v1/analyze",
+        json=make_log_with_content(
+            "instruction cache parity error corrected",
+            node="R30-M0-N9-C:J16-U01",
+        ),
+    )
+    assert r.status_code == 200
+    body = r.json()
+
+    assert body["isAbnormal"] is False
+    result = body["result"]
+    assert result["eventId"] is None
+    assert result["riskLevel"] is None
+    assert result["clusterId"] is None
+
+
+# ──────────────────────────────────────────────
+# Phase 5-3: 배치 동시성 상한 테스트 (Semaphore ≤ 8)
+# ──────────────────────────────────────────────
+
+def test_batch_concurrency_cap(monkeypatch) -> None:
+    """20건 배치 처리 시 동시 실행 peak가 batch_concurrency(8) 이하임을 검증한다.
+
+    run_diagnosis를 async spy로 교체해 진입/종료 시점에 카운터를 기록한다.
+    전역 _llm_semaphore를 리셋해 테스트 간 상태 오염을 방지한다.
+    """
+    import asyncio as _asyncio
+
+    import app.services.analysis_service as _svc
+
+    # 전역 세마포어를 리셋 — 이전 테스트에서 생성된 세마포어가 남아 있으면
+    # 카운트가 이미 소모된 상태일 수 있으므로 새로 생성하도록 초기화
+    _svc._llm_semaphore = None
+
+    concurrent = 0
+    peak = 0
+
+    async def spy_diagnosis(*args, **kwargs):
+        nonlocal concurrent, peak
+        concurrent += 1
+        if concurrent > peak:
+            peak = concurrent
+        await _asyncio.sleep(0)   # 다른 코루틴에게 실행 기회를 양보
+        concurrent -= 1
+        return {"summary": "요약", "analysis": "분석", "action": "대응", "reason": "근거"}
+
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", spy_diagnosis)
+
+    # 20건 배치 (전부 FATAL 기본 로그 → 이상 경로 → run_diagnosis 호출)
+    payload = {"logs": [make_log(i) for i in range(1, 21)]}
+    r = client.post("/ai/v1/analyze/batch", json=payload)
+    assert r.status_code == 200
+
+    body = r.json()
+    assert body["totalCount"] == 20
+
+    # 핵심 검증: 동시 실행 peak가 세마포어 상한(8) 이하
+    assert peak <= 8, f"동시성 상한 초과: peak={peak} (상한: 8)"
+    # 모든 건이 정상 처리됐는지 확인
+    success_count = sum(1 for item in body["results"] if item["processStatus"] == "success")
+    assert success_count == 20, f"성공 건수: {success_count}/20"
