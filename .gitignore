@@ -10,7 +10,9 @@ CLAUDE.local.md
 .env.*
 !.env.example
 logs/
+.langgraph_api/
 
+# 개인 작업 파일
 # 대용량 원본 로그 (전체 BGL). 2k 서브셋만 커밋한다.
 tests/BGL/BGL.log
 .agents/DECISIONS_2026-06-24.md
