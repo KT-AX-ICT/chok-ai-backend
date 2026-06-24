@@ -86,6 +86,32 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 기본 주소: `http://127.0.0.1:8000`
 Swagger UI 주소: `http://127.0.0.1:8000/docs`
 
+### 로그 출력 위치 및 레벨 설정
+
+서버 실행 시 로그는 **콘솔(stdout)** 과 **`logs/app.log`** 두 곳에 동시 기록된다.
+
+- 로그 파일 위치: 프로젝트 루트 `logs/app.log` (서버 최초 실행 시 자동 생성)
+- 로테이션: 10 MB 초과 시 자동 교체, 최대 5개 보관 (`app.log.1` ~ `app.log.5`)
+
+로그 레벨 변경은 환경 변수로 override한다.
+
+```bash
+# DEBUG 레벨로 실행 (상세 로그)
+CHOK_AI_LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload
+
+# WARNING 이상만 출력
+CHOK_AI_LOG_LEVEL=WARNING uv run uvicorn app.main:app --reload
+```
+
+Windows PowerShell:
+
+```powershell
+$env:CHOK_AI_LOG_LEVEL = "DEBUG"
+uv run uvicorn app.main:app --reload
+```
+
+기본 로그 레벨은 `INFO`이며 `.env` 파일에 `CHOK_AI_LOG_LEVEL=DEBUG`를 추가해도 된다.
+
 | 경로 | 메서드 | 용도 |
 | --- | --- | --- |
 | `/health` | GET | 헬스 체크 (키 불필요) |

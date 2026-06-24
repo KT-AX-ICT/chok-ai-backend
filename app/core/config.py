@@ -35,13 +35,21 @@ class Settings(BaseSettings):
     # 모델은 CHOK_AI_LLM_MODEL 로 override 가능
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.2
-    llm_max_tokens: int = 1024
+    llm_max_tokens: int = 2048  # 상세 analysis + 단계별 action 출력을 담기 위해 1024 → 2048 상향
 
     # ── 배치 처리 · 회복탄력성 ──────────────────
     batch_concurrency: int = 8          # 전역 asyncio.Semaphore 상한 (동시 LLM 호출 캡)
     batch_timeout_s: int = 300          # 전체 배치 타임아웃 (5분)
     llm_call_timeout_s: int = 60        # 개별 LLM 호출 타임아웃
     llm_max_retries: int = 6            # 지수 백오프 재시도 횟수 (429/5xx 대응)
+
+    # ── 로깅 ─────────────────────────────────────
+    # CHOK_AI_LOG_LEVEL 로 override 가능 (INFO/DEBUG/WARNING/ERROR)
+    log_level: str = "INFO"
+    log_dir: str = "logs"
+    log_file: str = "app.log"
+    log_max_bytes: int = 10_485_760     # 10 MB
+    log_backup_count: int = 5
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -16,6 +16,11 @@ from app.core.errors import (
     handle_unexpected,
     handle_validation,
 )
+from app.core.logging import setup_logging
+
+# uvicorn이 모듈을 import한 직후 로깅 설정을 적용한다.
+# FastAPI 인스턴스 생성 전에 호출해야 핸들러가 모든 로거에 적용된다.
+setup_logging()
 
 settings = get_settings()
 

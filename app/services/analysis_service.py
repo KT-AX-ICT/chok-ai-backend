@@ -51,12 +51,14 @@ async def analyze_single_log(
     단건 로그 분석 파이프라인. (status, result) 반환.
     LangGraph StateGraph를 ainvoke하여 Tool①②③④ + LLM + 결과매핑을 실행한다.
     """
-    initial_state = {"log": log}
+    logger.info("단건 분석 시작 — log_id=%s", log.log_id)
+    initial_state = {"log": log, "tag": "BGL 로그 데이터", "messages": [], "tools_done": []}
     final_state = await graph.ainvoke(initial_state)
 
     status: LogStatus = final_state["status"]
     result_data = final_state["result"]
     result = AnalyzeResult.model_validate(result_data)
+    logger.info("단건 분석 완료 — log_id=%s, status=%s", log.log_id, status)
     return status, result
 
 
@@ -72,15 +74,30 @@ async def analyze_batch_logs(logs: list[AnalyzeRequest]) -> list[BatchItemResult
     """
     settings = get_settings()
     sem = _get_semaphore()
+    logger.info(
+        "배치 분석 시작 — 건수=%d, 동시성 상한=%d",
+        len(logs),
+        settings.batch_concurrency,
+    )
 
     async def _limited(log: AnalyzeRequest) -> BatchItemResult:
         async with sem:
             return await _safe_analyze(log)
 
-    return await asyncio.wait_for(
+    results: list[BatchItemResult] = await asyncio.wait_for(
         asyncio.gather(*[_limited(log) for log in logs]),
         timeout=settings.batch_timeout_s,
     )
+
+    success_count = sum(1 for r in results if r.process_status == ProcessStatus.SUCCESS)
+    fail_count = len(results) - success_count
+    logger.info(
+        "배치 분석 완료 — 전체=%d, 성공=%d, 실패=%d",
+        len(results),
+        success_count,
+        fail_count,
+    )
+    return results
 
 
 async def _safe_analyze(log: AnalyzeRequest) -> BatchItemResult:
