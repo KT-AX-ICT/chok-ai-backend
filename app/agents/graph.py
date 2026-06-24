@@ -55,6 +55,7 @@ class AgentState(TypedDict, total=False):
     # ③ 산출 (이상 경로)
     cluster_id: int
     cluster_matched: bool
+    cluster_ctx: str       # _format_cluster_ctx 결과 문자열 (LLM 프롬프트용)
     # ④ 산출 (이상 경로)
     node_ctx: str         # _format_node_ctx 결과 문자열
     # LLM 산출
@@ -87,6 +88,22 @@ def _format_node_ctx(info: NodeInfoResult) -> str:
     if info.alert_stats:
         parts.append(f"AlertPct: {info.alert_stats.alert_pct:.1f}%")
     return " | ".join(parts) if parts else "(노드 정보 없음)"
+
+
+def _format_cluster_ctx(result) -> str:
+    """ClusterResult → LLM 프롬프트용 클러스터 컨텍스트 문자열.
+
+    예: '클러스터 3 — 커널 종료/패닉군 — 커널 종료: 커널이 종료(terminated)되거나...'
+    제목·설명이 없으면 '클러스터 {id} (설명 없음)' 반환.
+    """
+    cid = result.cluster_id
+    title = result.cluster_title
+    desc = result.description
+    if title and desc:
+        return f"클러스터 {cid} — {title}: {desc}"
+    if title:
+        return f"클러스터 {cid} — {title}"
+    return f"클러스터 {cid} (설명 없음)"
 
 
 # ──────────────────────────────────────────────
@@ -122,6 +139,7 @@ async def cluster_node(state: AgentState) -> dict:
     return {
         "cluster_id": result.cluster_id,
         "cluster_matched": result.matched,
+        "cluster_ctx": _format_cluster_ctx(result),
     }
 
 
@@ -141,7 +159,10 @@ async def llm_node(state: AgentState) -> dict:
 
     if not state["is_anomaly"]:
         # 정상 경로: 정상 사유만 작성
-        llm_out = await run_normal_reason(log, event_id)
+        # Tool② 산출값(category/impact)을 프롬프트 컨텍스트로 전달
+        category = state.get("category") or "UNKNOWN"
+        impact = state.get("impact") or ""
+        llm_out = await run_normal_reason(log, event_id, category=category, impact=impact)
         return {
             "summary": llm_out["summary"],
             "analysis": llm_out["analysis"],
@@ -150,10 +171,17 @@ async def llm_node(state: AgentState) -> dict:
         }
 
     # 이상 경로: ①②③④ 컨텍스트 + 원본 로그 → 이상 근거·대응 생성
+    # Tool② 산출값(category/impact/action_ctx)을 프롬프트 컨텍스트로 전달
     risk_level = _URGENCY_KO.get(Urgency(state["urgency"]), "보통")
     node_ctx = state.get("node_ctx", "(노드 정보 없음)")
-    cluster_id = state.get("cluster_id", 99)
-    llm_out = await run_diagnosis(log, risk_level, cluster_id, event_id, node_ctx)
+    cluster_ctx = state.get("cluster_ctx", f"클러스터 {state.get('cluster_id', 99)} (설명 없음)")
+    category = state.get("category") or "UNKNOWN"
+    impact = state.get("impact") or ""
+    action_hint = state.get("action_ctx") or ""
+    llm_out = await run_diagnosis(
+        log, risk_level, cluster_ctx, event_id, node_ctx,
+        category=category, impact=impact, action_hint=action_hint,
+    )
     return {
         "summary": llm_out["summary"],
         "analysis": llm_out["analysis"],

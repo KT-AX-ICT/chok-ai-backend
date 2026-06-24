@@ -14,7 +14,7 @@ SYSTEM_PROMPT = """당신은 BGL(Blue Gene/L) HPC 시스템 로그 분석 전문
 
 [입력]
 - '이상'으로 판정된 로그 한 건
-- 결정적 Tool이 산출한 긴급도(risk_level)·패턴 클러스터 ID(cluster_id)·노드 컨텍스트
+- 결정적 Tool이 산출한 긴급도(risk_level)·도메인 분류(category)·장애 영향(impact)·권장 대응(action_hint)·패턴 클러스터(cluster_ctx)·노드 컨텍스트
 
 [원칙]
 1. 이상 여부를 다시 판단하지 마세요. 입력 로그는 이상으로 확정되었습니다.
@@ -22,6 +22,7 @@ SYSTEM_PROMPT = """당신은 BGL(Blue Gene/L) HPC 시스템 로그 분석 전문
 3. 추측은 "~로 추정됨", "~일 가능성이 있음"으로 명시하세요.
 4. 운영자가 즉시 이해할 수 있도록 간결하고 기술적으로 작성하세요.
 5. 모든 출력은 한국어로 작성하세요.
+6. impact와 action_hint는 결정적 규칙 기반 힌트입니다. 로그 본문·컨텍스트를 근거로 정제하여 자신의 언어로 작성하세요. 그대로 복붙하지 마세요.
 
 [출력 필드]
 - summary: 이상 상황 한 문장 요약 (무엇이/어디서/어떻게)
@@ -44,7 +45,10 @@ USER_PROMPT_TEMPLATE = """[로그 정보]
 
 [결정적 Tool 산출값 — 재판단 금지]
 - 긴급도(risk_level): {risk_level}
-- 패턴 클러스터 ID(cluster_id): {cluster_id}
+- 도메인 분류(category): {category}
+- 장애 영향(impact): {impact}
+- 권장 대응(action_hint): {action_hint}
+- 패턴 클러스터: {cluster_ctx}
 
 위 로그에 대한 summary / analysis / action 세 필드를 작성하세요.
 """
@@ -63,6 +67,7 @@ NORMAL_SYSTEM_PROMPT = """당신은 BGL(Blue Gene/L) HPC 시스템 로그 분석
 1. 판정(정상)을 뒤집지 마세요. 정상으로 본 사유만 설명합니다.
 2. 추측은 "~로 추정됨"으로 명시하세요.
 3. 간결하고 기술적으로, 한국어로 작성하세요.
+4. impact는 참고용 출발점입니다. 반드시 로그 본문·컴포넌트 근거를 중심으로 정제하여 자신의 표현으로 작성하세요.
 
 [출력 필드]
 - summary: 정상으로 판단한 핵심 사유 한 문장
@@ -79,5 +84,10 @@ NORMAL_USER_PROMPT_TEMPLATE = """[로그 정보]
 - 이벤트 ID: {event_id}
 - 본문: {content}
 
+[정상 컨텍스트 — 참고용]
+- 도메인 분류(category): {category}
+- 이벤트 영향 설명(impact): {impact}
+
 이 로그를 정상으로 판단한 사유(summary, analysis)를 작성하세요.
+  (impact는 참고용 출발점입니다. 로그 본문을 근거로 정제하여 작성하세요.)
 """
