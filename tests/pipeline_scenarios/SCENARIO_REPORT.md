@@ -1,6 +1,6 @@
 # Tool①→②→③→④ 전체 파이프라인 시나리오 검증 리포트
 
-- 생성: 2026-06-23
+- 생성: 2026-06-24
 - 진입 조건: FATAL 레벨 event_id 한정
 - 파이프라인: `extract_event_template` → `classify_anomaly` → `assign_cluster` → `get_node_info`
 - 라우팅 기준: `is_anomaly=False` → LLM  /  `is_anomaly=True` → Tool③ 진행
@@ -10,8 +10,8 @@
 
 | # | 시나리오 | event_id | is_anomaly / urgency | 클러스터 | alert_pct | 결과 |
 |---|---|---|---|---|---|---|
-| S1 | 정상 — 명령어 캐시 패리티 자동 정정 | `E77` | False / None | 미진행 | 41.96% | ✅ PASS |
-| S2 | 정상 — job 수준 실패 (ciod 파일 없음) | `E28` | False / None | 미진행 | 0.7% | ✅ PASS |
+| S1 | 정상 — 명령어 캐시 패리티 자동 정정 | `E77` | False / Low | 미진행 | 41.96% | ✅ PASS |
+| S2 | 정상 — job 수준 실패 (ciod 파일 없음) | `E28` | False / Mid | 미진행 | 0.7% | ✅ PASS |
 | S3 | 비정상 Critical — 데이터 스토리지 인터럽트 | `E52` | True / Critical | cluster 0 | 41.96% | ✅ PASS |
 | S4 | 비정상 Critical — 커널 비정상 종료 | `E111` | True / Critical | cluster 3 | 0.7% | ✅ PASS |
 | S5 | 비정상 High — DDR 메모리 오류 | `E1` | True / High | cluster 99 | 0.7% | ✅ PASS |
@@ -19,7 +19,7 @@
 | S7 | 비정상 Low — L3 EDRAM 정정 가능 오류 | `E5` | True / Low | cluster 99 | 0.7% | ✅ PASS |
 | S8 | 미분류 — 템플릿 매칭 실패 → unknown | `unknown` | True / Mid | cluster 99 | 0.7% | ✅ PASS |
 | S9 | NULL 노드 — 파싱 불가, 이상 경로 | `E52` | True / Critical | cluster 0 | None% | ✅ PASS |
-| S10 | 소문자 노드 — 자동 정규화 후 정상 조회 | `E77` | False / None | 미진행 | 41.96% | ✅ PASS |
+| S10 | 소문자 노드 — 자동 정규화 후 정상 조회 | `E77` | False / Low | 미진행 | 41.96% | ✅ PASS |
 
 
 ## 상세 트레이스
@@ -30,10 +30,10 @@
 - Content: `instruction cache parity error corrected`
 - Node: `R30-M0-N9-C:J16-U01`
 - Tool①: `event_id=E77`
-- Tool②: `is_anomaly=False`, `urgency=None` → **LLM 라우팅 (FastAPI)**
+- Tool②: `is_anomaly=False`, `urgency=Low` → **LLM 라우팅 (FastAPI)**
 - Tool③: `미진행`
 - Tool④: `rack=R30, slot=N9, role=Compute, alert_pct=41.96%`
-- 기대: eid=`E77`, anomaly=`False`, urgency=`None`, cluster=`None`, rack=`R30`, alert_pct=`41.96%`
+- 기대: eid=`E77`, anomaly=`False`, urgency=`Low`, cluster=`None`, rack=`R30`, alert_pct=`41.96%`
 - 결과: **✅ PASS**
 
 ### S2. 정상 — job 수준 실패 (ciod 파일 없음)
@@ -42,10 +42,10 @@
 - Content: `ciod: Error loading /foo: invalid or missing program image, No such file or directory`
 - Node: `R04-M1-N4-I:J18-U11`
 - Tool①: `event_id=E28`
-- Tool②: `is_anomaly=False`, `urgency=None` → **LLM 라우팅 (FastAPI)**
+- Tool②: `is_anomaly=False`, `urgency=Mid` → **LLM 라우팅 (FastAPI)**
 - Tool③: `미진행`
 - Tool④: `rack=R04, slot=N4, role=I/O, alert_pct=0.7%`
-- 기대: eid=`E28`, anomaly=`False`, urgency=`None`, cluster=`None`, rack=`R04`, alert_pct=`0.7%`
+- 기대: eid=`E28`, anomaly=`False`, urgency=`Mid`, cluster=`None`, rack=`R04`, alert_pct=`0.7%`
 - 결과: **✅ PASS**
 
 ### S3. 비정상 Critical — 데이터 스토리지 인터럽트
@@ -138,9 +138,9 @@
 - Content: `instruction cache parity error corrected`
 - Node: `r30-m0-n9-c:j16-u01`
 - Tool①: `event_id=E77`
-- Tool②: `is_anomaly=False`, `urgency=None` → **LLM 라우팅 (FastAPI)**
+- Tool②: `is_anomaly=False`, `urgency=Low` → **LLM 라우팅 (FastAPI)**
 - Tool③: `미진행`
 - Tool④: `rack=R30, slot=N9, role=Compute, alert_pct=41.96%`
-- 기대: eid=`E77`, anomaly=`False`, urgency=`None`, cluster=`None`, rack=`R30`, alert_pct=`41.96%`
+- 기대: eid=`E77`, anomaly=`False`, urgency=`Low`, cluster=`None`, rack=`R30`, alert_pct=`41.96%`
 - 결과: **✅ PASS**
 
