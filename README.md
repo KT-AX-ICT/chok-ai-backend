@@ -110,3 +110,121 @@ P0 범위는 다음 흐름을 우선합니다.
 
 - 실 데이터 기반 Tool 파라미터·프롬프트 튜닝 및 시나리오 검증 보강
 - Spring batch 연동(동시 5) end-to-end 안정화
+
+## API 서버 구동 및 수동 테스트
+
+> pytest는 LLM을 monkeypatch하지만, **실제 서버를 띄워 직접 호출**하려면 `.env`에 `OPENAI_API_KEY`가 있어야 한다(분석 요청이 실제 OpenAI를 호출). 키가 비어 있으면 분석 요청 시 오류가 난다. `/health`는 키 없이도 동작한다.
+
+### 서버 실행
+
+```bash
+# 개발용 (코드 변경 시 자동 리로드)
+uv run uvicorn app.main:app --reload
+
+# 포트 지정 / 외부 접속 허용
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+기본 주소: `http://127.0.0.1:8000`
+Swagger UI 주소: `http://127.0.0.1:8000/docs`
+
+### 로그 출력 위치 및 레벨 설정
+
+서버 실행 시 로그는 **콘솔(stdout)** 과 **`logs/app.log`** 두 곳에 동시 기록된다.
+
+- 로그 파일 위치: 프로젝트 루트 `logs/app.log` (서버 최초 실행 시 자동 생성)
+- 로테이션: 10 MB 초과 시 자동 교체, 최대 5개 보관 (`app.log.1` ~ `app.log.5`)
+
+로그 레벨 변경은 환경 변수로 override한다.
+
+```bash
+# DEBUG 레벨로 실행 (상세 로그)
+CHOK_AI_LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload
+
+# WARNING 이상만 출력
+CHOK_AI_LOG_LEVEL=WARNING uv run uvicorn app.main:app --reload
+```
+
+Windows PowerShell:
+
+```powershell
+$env:CHOK_AI_LOG_LEVEL = "DEBUG"
+uv run uvicorn app.main:app --reload
+```
+
+기본 로그 레벨은 `INFO`이며 `.env` 파일에 `CHOK_AI_LOG_LEVEL=DEBUG`를 추가해도 된다.
+
+| 경로 | 메서드 | 용도 |
+| --- | --- | --- |
+| `/health` | GET | 헬스 체크 (키 불필요) |
+| `/docs` | GET | Swagger UI — 브라우저에서 직접 요청·응답 시험 |
+| `/redoc` | GET | ReDoc 문서 |
+| `/ai/v1/analyze` | POST | 단건 분석 |
+| `/ai/v1/analyze/batch` | POST | 다건 분석 (최대 400건) |
+
+### 수동 호출 예시
+
+```bash
+# 헬스 체크
+curl http://127.0.0.1:8000/health
+#   → {"status":"ok"}
+
+# 단건 분석 (이상 이벤트 예시)
+curl -X POST http://127.0.0.1:8000/ai/v1/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "logId": 10293,
+    "node": "R04-M1-N4-I:J18-U11",
+    "nodeRepeat": "R04-M1-N4-I:J18-U11",
+    "component": "APP",
+    "logType": "RAS",
+    "occurredAt": "2005-06-04 00:24:32",
+    "logLevel": "FATAL",
+    "content": "data storage interrupt",
+    "domain": "BGL"
+  }'
+
+# 다건 분석 (로그 2건 — 최대 400건까지)
+curl -X POST http://127.0.0.1:8000/ai/v1/analyze/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "logs": [
+      {
+        "logId": 10293,
+        "node": "R04-M1-N4-I:J18-U11",
+        "nodeRepeat": "R04-M1-N4-I:J18-U11",
+        "component": "APP",
+        "logType": "RAS",
+        "occurredAt": "2005-06-04 00:24:32",
+        "logLevel": "FATAL",
+        "content": "data storage interrupt",
+        "domain": "BGL"
+      },
+      {
+        "logId": 10294,
+        "node": "R16-M0-NB-C:J07-U11",
+        "nodeRepeat": "R16-M0-NB-C:J07-U11",
+        "component": "KERNEL",
+        "logType": "RAS",
+        "occurredAt": "2005-06-04 00:25:11",
+        "logLevel": "FATAL",
+        "content": "rts: kernel terminated for reason 1001",
+        "domain": "BGL"
+      }
+    ]
+  }'
+```
+
+PowerShell이면 `Invoke-RestMethod`:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/ai/v1/analyze `
+  -ContentType "application/json" `
+  -Body '{"logId":10293,"node":"R04-M1-N4-I:J18-U11","nodeRepeat":"R04-M1-N4-I:J18-U11","component":"APP","logType":"RAS","occurredAt":"2005-06-04 00:24:32","logLevel":"FATAL","content":"data storage interrupt","domain":"BGL"}'
+```
+
+> 가장 쉬운 수동 테스트는 `GET /docs`(Swagger UI)에서 **Try it out**으로 직접 요청을 보내는 것이다.
+
+### 테스트 케이스 목록
+
+엔드포인트·분기·도구별 시험 항목 전체는 [`TEST_CASES.csv`](TEST_CASES.csv) 참고.
