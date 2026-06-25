@@ -86,6 +86,15 @@ def setup_logging() -> None:
                     "handlers": [],
                     "propagate": True,
                 },
+                # 개발 서버(--reload / langgraph dev)의 파일 감시자.
+                # DEBUG "change detected"가 logs/app.log에 기록되면 파일 수정 →
+                # 재감지 → 재기록의 무한 피드백 루프가 생기므로 WARNING으로 캡한다.
+                # (watchfiles.main 등 하위 로거는 NOTSET이라 이 레벨을 상속받는다.)
+                "watchfiles": {
+                    "level": "WARNING",
+                    "handlers": [],
+                    "propagate": True,
+                },
             },
         }
     )
