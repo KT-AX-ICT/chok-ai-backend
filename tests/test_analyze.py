@@ -865,3 +865,122 @@ async def test_llm_node_passes_impact_to_run_normal_reason(monkeypatch) -> None:
     call_kwargs = mock_run.call_args.kwargs
     assert call_kwargs["impact"] == "ECC 자동 정정됨. 단발성으로 정상 동작."
     assert call_kwargs["category"] == "HARDWARE"
+
+
+# ──────────────────────────────────────────────
+# ingest_node 단위 테스트
+# ──────────────────────────────────────────────
+
+def test_ingest_node_normalizes_dict() -> None:
+    """dict 입력 → updates["log"]가 AnalyzeRequest 인스턴스이고 속성이 올바르게 채워진다."""
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    log_dict = {
+        "logId": 10293,
+        "node": "R04-M1-N4-I:J18-U11",
+        "nodeRepeat": "R04-M1-N4-I:J18-U11",
+        "component": "APP",
+        "logType": "RAS",
+        "occurredAt": "2005-06-04 00:24:32",
+        "logLevel": "FATAL",
+        "content": "data storage interrupt",
+        "domain": "BGL",
+    }
+
+    state = {
+        "log": log_dict,
+        "tag": "BGL 로그 데이터",
+        "tools_done": [],
+    }
+
+    updates = _graph.ingest_node(state)
+
+    assert "log" in updates, "dict 입력 시 updates에 'log' 키가 있어야 한다"
+    assert isinstance(updates["log"], AnalyzeRequest), "updates['log']는 AnalyzeRequest 인스턴스여야 한다"
+    assert updates["log"].content == "data storage interrupt"
+    assert updates["log"].node == "R04-M1-N4-I:J18-U11"
+
+
+def test_ingest_node_passthrough_object() -> None:
+    """log가 이미 AnalyzeRequest 객체면 updates에 'log' 키가 없다(무해 통과)."""
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    log_obj = AnalyzeRequest(
+        log_id=1,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="data storage interrupt",
+        domain="BGL",
+    )
+
+    state = {
+        "log": log_obj,
+        "tag": "BGL 로그 데이터",
+        "tools_done": [],
+    }
+
+    updates = _graph.ingest_node(state)
+
+    assert "log" not in updates, "객체 입력 시 updates에 'log' 키가 없어야 한다(통과)"
+
+
+def test_ingest_node_defaults_tag() -> None:
+    """tag 미지정 시 updates['tag'] == 'BGL 로그 데이터' 기본값이 보강된다."""
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    # AnalyzeRequest 객체를 넘겨 dict 분기를 피하고, tag 기본값 보강만 검증한다.
+    log_obj = AnalyzeRequest(
+        log_id=1,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="data storage interrupt",
+        domain="BGL",
+    )
+
+    state = {
+        "log": log_obj,
+        # tag 미지정
+        "tools_done": [],
+    }
+
+    updates = _graph.ingest_node(state)
+
+    assert updates.get("tag") == "BGL 로그 데이터", (
+        f"tag 기본값이 보강되어야 한다. 실제: {updates.get('tag')!r}"
+    )
+
+
+def test_ingest_graph_e2e_dict_input(monkeypatch) -> None:
+    """그래프 e2e: dict 입력으로 graph.ainvoke 호출 시 AttributeError 없이 result를 산출한다.
+
+    기존 FakeLLM monkeypatch 패턴을 재사용해 외부 호출 없이 검증한다.
+    """
+    import asyncio
+
+    import app.agents.graph as _graph
+
+    monkeypatch.setattr(f"{GRAPH}._get_agent_llm", lambda: FakeLLM())
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    log_dict = make_log_with_content("data storage interrupt", log_id=10293)
+
+    final_state = asyncio.run(
+        _graph.graph.ainvoke({
+            "log": log_dict,
+            # tag/tools_done 미지정 — ingest_node가 기본값 보강하는지도 함께 검증
+        })
+    )
+
+    assert "result" in final_state, "final_state에 'result' 키가 있어야 한다"
+    assert final_state["result"] is not None, "result가 None이 아니어야 한다"
