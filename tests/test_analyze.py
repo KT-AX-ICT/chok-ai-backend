@@ -984,3 +984,45 @@ def test_ingest_graph_e2e_dict_input(monkeypatch) -> None:
 
     assert "result" in final_state, "final_state에 'result' 키가 있어야 한다"
     assert final_state["result"] is not None, "result가 None이 아니어야 한다"
+
+
+# ──────────────────────────────────────────────
+# 완료 로그 판정값 포함 검증 (caplog)
+# ──────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_analyze_single_log_completion_log_contains_verdict(monkeypatch, caplog) -> None:
+    """이상 케이스: analyze_single_log 완료 로그에 판정 핵심값이 포함된다.
+
+    caplog으로 INFO 레벨 로그를 캡처한 뒤 isAbnormal/eventId/riskLevel/clusterId가
+    로그 텍스트에 모두 찍히는지 단언한다.
+    """
+    import logging
+
+    from app.schemas.analysis import AnalyzeRequest
+    from app.services.analysis_service import analyze_single_log
+
+    monkeypatch.setattr(f"{GRAPH}._get_agent_llm", lambda: FakeLLM())
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    log = AnalyzeRequest(
+        log_id=9999,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="data storage interrupt",   # known 이상 event(E52) → isAbnormal=True
+        domain="BGL",
+    )
+
+    with caplog.at_level(logging.INFO, logger="app.services.analysis_service"):
+        await analyze_single_log(log)
+
+    # 완료 로그 텍스트를 합쳐서 검증
+    log_text = " ".join(caplog.messages)
+    assert "isAbnormal" in log_text, f"'isAbnormal' not found in log: {log_text!r}"
+    assert "eventId=" in log_text, f"'eventId=' not found in log: {log_text!r}"
+    assert "riskLevel=" in log_text, f"'riskLevel=' not found in log: {log_text!r}"
+    assert "clusterId=" in log_text, f"'clusterId=' not found in log: {log_text!r}"
