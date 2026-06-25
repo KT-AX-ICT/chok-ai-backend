@@ -200,7 +200,7 @@ def test_analyze_normal_path(monkeypatch) -> None:
 
     assert body["isAbnormal"] is False
     result = body["result"]
-    assert result["eventId"] is None               # 정상 → null
+    assert result["eventId"] == "E33"               # 정상 + 매칭 → event_id 반환
     assert result["riskLevel"] is None             # 정상 → null
     assert result["clusterId"] is None             # 정상 → null
     assert result["action"] == ""                  # 정상 → ""
@@ -610,7 +610,7 @@ def test_guard_node_normal_path_fills_required(monkeypatch) -> None:
     body = r.json()
     assert body["isAbnormal"] is False
     result = body["result"]
-    assert result["eventId"] is None
+    assert result["eventId"] == "E33"              # 정상 + 매칭 → event_id 반환
     assert result["riskLevel"] is None
     assert result["clusterId"] is None
 
@@ -702,7 +702,7 @@ def test_tool_integration_known_event_normal(monkeypatch) -> None:
 
     assert body["isAbnormal"] is False
     result = body["result"]
-    assert result["eventId"] is None
+    assert result["eventId"] == "E77"              # 정상 + 매칭 → event_id 반환
     assert result["riskLevel"] is None
     assert result["clusterId"] is None
 

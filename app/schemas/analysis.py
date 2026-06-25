@@ -89,7 +89,7 @@ class BatchAnalyzeRequest(CamelModel):
 
 class AnalyzeResult(CamelModel):
     """분석 결과 본문 (log_analysis 한 행에 매핑)."""
-    event_id: str | None = None                          # 이상: 이벤트 ID / 정상: null
+    event_id: str | None = None                          # 정상·이상 모두 매칭된 event_id 반환; 템플릿 미매칭 시만 null
     risk_level: RiskLevel | None = None                  # 이상: 위험도 / 정상: null
     summary: str                                         # 공통 — 정상이면 정상 사유
     analysis: str                                        # 공통 — 정상이면 정상 사유

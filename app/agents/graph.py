@@ -517,7 +517,8 @@ async def map_node(state: AgentState) -> dict:
         cluster_id: int | None = state.get("cluster_id", 99)
     else:
         risk_level = None
-        event_id = None
+        # 정상도 매칭된 event_id 반환; 미매칭 sentinel만 null
+        event_id = state["event_id"] if state.get("template_matched") else None
         cluster_id = None
 
     status = "이상" if is_anomaly else "정상"
