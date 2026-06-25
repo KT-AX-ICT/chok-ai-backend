@@ -90,19 +90,28 @@ def test_every_curated_event_id_maps_to_its_cluster() -> None:
             assert result.matched is True
 
 
+def _expected_cluster(cid: int) -> dict:
+    clusters = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    return next(c for c in clusters if c["id"] == cid)
+
+
 def test_cluster_result_includes_title_and_description_from_real_metadata() -> None:
-    # E111 → cluster 3 (커널 종료/패닉군 — 커널 종료)
+    # E111 → cluster 3; 제목/설명은 clusters.json이 SSOT
     result = assign_cluster("E111")
+    expected = _expected_cluster(3)
 
     assert result.cluster_id == 3
-    assert result.cluster_title == "커널 종료/패닉군 — 커널 종료"
+    assert result.cluster_title == expected["cluster_title"]
+    assert result.description == expected["description"]
     assert result.description is not None and len(result.description) > 0
 
 
 def test_misc_cluster_result_includes_title_and_description() -> None:
-    # unknown event_id → cluster 99 (미분류)
+    # unknown event_id → cluster 99 (미분류); 제목/설명은 clusters.json이 SSOT
     result = assign_cluster("unknown")
+    expected = _expected_cluster(99)
 
     assert result.cluster_id == 99
-    assert result.cluster_title == "미분류 (관리자 검토 필요)"
+    assert result.cluster_title == expected["cluster_title"]
+    assert result.description == expected["description"]
     assert result.description is not None and len(result.description) > 0
