@@ -165,6 +165,33 @@ def _next_phase(state: AgentState) -> str | None:
 
 
 # ──────────────────────────────────────────────
+# 입력 정규화 노드
+# ──────────────────────────────────────────────
+
+def ingest_node(state: AgentState) -> dict:
+    """입력 정규화 노드 — Studio/직접 JSON 입력 호환용.
+
+    - log가 dict(JSON)이면 AnalyzeRequest 객체로 변환해 이후 노드의 속성 접근을 보장한다.
+    - FastAPI 경로는 이미 AnalyzeRequest 객체를 넘기므로 그대로 통과(무해).
+    - Studio 편의: tag/messages/tools_done가 비어 있으면 기본값을 채워
+      태그 없이 Submit해도 툴 호출 경로가 정상 동작하도록 한다.
+    """
+    updates: dict = {}
+
+    log = state.get("log")
+    if isinstance(log, dict):
+        updates["log"] = AnalyzeRequest.model_validate(log)
+
+    # Studio에서 tag를 빠뜨리면 agent_node가 '태그 없음'으로 조기 종료하므로 기본값 보강.
+    if not state.get("tag"):
+        updates["tag"] = _BGL_TAG
+    if state.get("tools_done") is None:
+        updates["tools_done"] = []
+
+    return updates
+
+
+# ──────────────────────────────────────────────
 # LLM 팩토리 — 테스트가 monkeypatch할 수 있도록 별도 함수로 분리
 # ──────────────────────────────────────────────
 
@@ -490,7 +517,8 @@ async def map_node(state: AgentState) -> dict:
         cluster_id: int | None = state.get("cluster_id", 99)
     else:
         risk_level = None
-        event_id = None
+        # 정상도 매칭된 event_id 반환; 미매칭 sentinel만 null
+        event_id = state["event_id"] if state.get("template_matched") else None
         cluster_id = None
 
     status = "이상" if is_anomaly else "정상"
@@ -550,13 +578,15 @@ def route_after_agent(state: AgentState) -> str:
 # ──────────────────────────────────────────────
 
 _builder = StateGraph(AgentState)
+_builder.add_node("ingest", ingest_node)
 _builder.add_node("agent", agent_node)
 _builder.add_node("tools_exec", tool_exec_node)
 _builder.add_node("guard", guard_node)
 _builder.add_node("reasoning", reasoning_node)
 _builder.add_node("map", map_node)
 
-_builder.add_edge(START, "agent")
+_builder.add_edge(START, "ingest")
+_builder.add_edge("ingest", "agent")
 _builder.add_conditional_edges(
     "agent",
     route_after_agent,

@@ -58,7 +58,15 @@ async def analyze_single_log(
     status: LogStatus = final_state["status"]
     result_data = final_state["result"]
     result = AnalyzeResult.model_validate(result_data)
-    logger.info("단건 분석 완료 — log_id=%s, status=%s", log.log_id, status)
+    logger.info(
+        "단건 분석 완료 — log_id=%s, status=%s, isAbnormal=%s, eventId=%s, riskLevel=%s, clusterId=%s",
+        log.log_id,
+        status,
+        status == "이상",
+        result.event_id,
+        result.risk_level,
+        result.cluster_id,
+    )
     return status, result
 
 

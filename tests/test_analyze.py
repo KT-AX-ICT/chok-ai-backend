@@ -200,7 +200,7 @@ def test_analyze_normal_path(monkeypatch) -> None:
 
     assert body["isAbnormal"] is False
     result = body["result"]
-    assert result["eventId"] is None               # 정상 → null
+    assert result["eventId"] == "E33"               # 정상 + 매칭 → event_id 반환
     assert result["riskLevel"] is None             # 정상 → null
     assert result["clusterId"] is None             # 정상 → null
     assert result["action"] == ""                  # 정상 → ""
@@ -610,7 +610,7 @@ def test_guard_node_normal_path_fills_required(monkeypatch) -> None:
     body = r.json()
     assert body["isAbnormal"] is False
     result = body["result"]
-    assert result["eventId"] is None
+    assert result["eventId"] == "E33"              # 정상 + 매칭 → event_id 반환
     assert result["riskLevel"] is None
     assert result["clusterId"] is None
 
@@ -702,7 +702,7 @@ def test_tool_integration_known_event_normal(monkeypatch) -> None:
 
     assert body["isAbnormal"] is False
     result = body["result"]
-    assert result["eventId"] is None
+    assert result["eventId"] == "E77"              # 정상 + 매칭 → event_id 반환
     assert result["riskLevel"] is None
     assert result["clusterId"] is None
 
@@ -865,3 +865,164 @@ async def test_llm_node_passes_impact_to_run_normal_reason(monkeypatch) -> None:
     call_kwargs = mock_run.call_args.kwargs
     assert call_kwargs["impact"] == "ECC 자동 정정됨. 단발성으로 정상 동작."
     assert call_kwargs["category"] == "HARDWARE"
+
+
+# ──────────────────────────────────────────────
+# ingest_node 단위 테스트
+# ──────────────────────────────────────────────
+
+def test_ingest_node_normalizes_dict() -> None:
+    """dict 입력 → updates["log"]가 AnalyzeRequest 인스턴스이고 속성이 올바르게 채워진다."""
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    log_dict = {
+        "logId": 10293,
+        "node": "R04-M1-N4-I:J18-U11",
+        "nodeRepeat": "R04-M1-N4-I:J18-U11",
+        "component": "APP",
+        "logType": "RAS",
+        "occurredAt": "2005-06-04 00:24:32",
+        "logLevel": "FATAL",
+        "content": "data storage interrupt",
+        "domain": "BGL",
+    }
+
+    state = {
+        "log": log_dict,
+        "tag": "BGL 로그 데이터",
+        "tools_done": [],
+    }
+
+    updates = _graph.ingest_node(state)
+
+    assert "log" in updates, "dict 입력 시 updates에 'log' 키가 있어야 한다"
+    assert isinstance(updates["log"], AnalyzeRequest), "updates['log']는 AnalyzeRequest 인스턴스여야 한다"
+    assert updates["log"].content == "data storage interrupt"
+    assert updates["log"].node == "R04-M1-N4-I:J18-U11"
+
+
+def test_ingest_node_passthrough_object() -> None:
+    """log가 이미 AnalyzeRequest 객체면 updates에 'log' 키가 없다(무해 통과)."""
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    log_obj = AnalyzeRequest(
+        log_id=1,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="data storage interrupt",
+        domain="BGL",
+    )
+
+    state = {
+        "log": log_obj,
+        "tag": "BGL 로그 데이터",
+        "tools_done": [],
+    }
+
+    updates = _graph.ingest_node(state)
+
+    assert "log" not in updates, "객체 입력 시 updates에 'log' 키가 없어야 한다(통과)"
+
+
+def test_ingest_node_defaults_tag() -> None:
+    """tag 미지정 시 updates['tag'] == 'BGL 로그 데이터' 기본값이 보강된다."""
+    import app.agents.graph as _graph
+    from app.schemas.analysis import AnalyzeRequest
+
+    # AnalyzeRequest 객체를 넘겨 dict 분기를 피하고, tag 기본값 보강만 검증한다.
+    log_obj = AnalyzeRequest(
+        log_id=1,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="data storage interrupt",
+        domain="BGL",
+    )
+
+    state = {
+        "log": log_obj,
+        # tag 미지정
+        "tools_done": [],
+    }
+
+    updates = _graph.ingest_node(state)
+
+    assert updates.get("tag") == "BGL 로그 데이터", (
+        f"tag 기본값이 보강되어야 한다. 실제: {updates.get('tag')!r}"
+    )
+
+
+def test_ingest_graph_e2e_dict_input(monkeypatch) -> None:
+    """그래프 e2e: dict 입력으로 graph.ainvoke 호출 시 AttributeError 없이 result를 산출한다.
+
+    기존 FakeLLM monkeypatch 패턴을 재사용해 외부 호출 없이 검증한다.
+    """
+    import asyncio
+
+    import app.agents.graph as _graph
+
+    monkeypatch.setattr(f"{GRAPH}._get_agent_llm", lambda: FakeLLM())
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    log_dict = make_log_with_content("data storage interrupt", log_id=10293)
+
+    final_state = asyncio.run(
+        _graph.graph.ainvoke({
+            "log": log_dict,
+            # tag/tools_done 미지정 — ingest_node가 기본값 보강하는지도 함께 검증
+        })
+    )
+
+    assert "result" in final_state, "final_state에 'result' 키가 있어야 한다"
+    assert final_state["result"] is not None, "result가 None이 아니어야 한다"
+
+
+# ──────────────────────────────────────────────
+# 완료 로그 판정값 포함 검증 (caplog)
+# ──────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_analyze_single_log_completion_log_contains_verdict(monkeypatch, caplog) -> None:
+    """이상 케이스: analyze_single_log 완료 로그에 판정 핵심값이 포함된다.
+
+    caplog으로 INFO 레벨 로그를 캡처한 뒤 isAbnormal/eventId/riskLevel/clusterId가
+    로그 텍스트에 모두 찍히는지 단언한다.
+    """
+    import logging
+
+    from app.schemas.analysis import AnalyzeRequest
+    from app.services.analysis_service import analyze_single_log
+
+    monkeypatch.setattr(f"{GRAPH}._get_agent_llm", lambda: FakeLLM())
+    monkeypatch.setattr(f"{GRAPH}.run_diagnosis", _fake_diagnosis)
+
+    log = AnalyzeRequest(
+        log_id=9999,
+        node="R04-M1-N4",
+        node_repeat="R04-M1-N4",
+        component="APP",
+        log_type="RAS",
+        occurred_at="2005-06-04 00:24:32",
+        log_level="FATAL",
+        content="data storage interrupt",   # known 이상 event(E52) → isAbnormal=True
+        domain="BGL",
+    )
+
+    with caplog.at_level(logging.INFO, logger="app.services.analysis_service"):
+        await analyze_single_log(log)
+
+    # 완료 로그 텍스트를 합쳐서 검증
+    log_text = " ".join(caplog.messages)
+    assert "isAbnormal" in log_text, f"'isAbnormal' not found in log: {log_text!r}"
+    assert "eventId=" in log_text, f"'eventId=' not found in log: {log_text!r}"
+    assert "riskLevel=" in log_text, f"'riskLevel=' not found in log: {log_text!r}"
+    assert "clusterId=" in log_text, f"'clusterId=' not found in log: {log_text!r}"

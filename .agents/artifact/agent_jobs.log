@@ -194,3 +194,47 @@
 [2026-06-24 19:47:08] [완료] Phase B: config llm_max_tokens 1024→2048 상향
 [2026-06-24 19:47:09] [완료] Phase B: 사용자 예시(권한상승/CVE 등) 미삽입 — 구조·어투만 추상 지침으로 반영
 [2026-06-24 19:47:10] [검증] Phase B: 전체 pytest 42 passed
+[2026-06-25 11:50:12] [TODO] ingest_node 작업 착수: app/agents/graph.py 현재 노드·엣지 구조 파악
+[2026-06-25 11:50:12] [TODO] ingest_node 작업 착수: AnalyzeRequest 임포트 경로 및 CamelModel 검증 확인
+[2026-06-25 11:50:12] [TODO] ingest_node 작업 착수: _BGL_TAG 상수 위치 및 값 확인
+[2026-06-25 11:50:12] [TODO] graph.py에 ingest_node 함수 추가 (dict→AnalyzeRequest 변환 + tag/tools_done 기본값 보강)
+[2026-06-25 11:50:12] [TODO] graph.py에 _builder.add_node("ingest", ingest_node) 등록
+[2026-06-25 11:50:12] [TODO] graph.py의 START→agent 엣지를 START→ingest로 교체
+[2026-06-25 11:50:12] [TODO] graph.py에 ingest→agent 엣지 추가
+[2026-06-25 11:50:12] [TODO] tests/test_analyze.py에 test_ingest_node_normalizes_dict 단위 테스트 추가
+[2026-06-25 11:50:12] [TODO] tests/test_analyze.py에 test_ingest_node_passthrough_object 단위 테스트 추가
+[2026-06-25 11:50:12] [TODO] tests/test_analyze.py에 test_ingest_node_defaults_tag 단위 테스트 추가
+[2026-06-25 11:50:12] [TODO] tests/test_analyze.py에 graph.ainvoke(dict 입력) e2e 회귀 테스트 추가
+[2026-06-25 11:50:12] [TODO] uv run pytest -q 실행하여 신규+기존 전체 green 검증
+[2026-06-25 14:06:15] [TODO] analysis_service.py의 analyze_single_log() 완료 로그 현재 형태 확인
+[2026-06-25 14:06:15] [TODO] AnalysisResult 모델에서 event_id/risk_level/cluster_id 필드 존재 여부 확인
+[2026-06-25 14:06:15] [TODO] analyze_single_log() 완료 로그에 isAbnormal 값 추가 (status=='이상' 비교)
+[2026-06-25 14:06:15] [TODO] analyze_single_log() 완료 로그에 eventId 값 추가 (result.event_id)
+[2026-06-25 14:06:15] [TODO] analyze_single_log() 완료 로그에 riskLevel 값 추가 (result.risk_level)
+[2026-06-25 14:06:15] [TODO] analyze_single_log() 완료 로그에 clusterId 값 추가 (result.cluster_id)
+[2026-06-25 14:06:15] [TODO] tests/에서 analyze_single_log 관련 기존 테스트 파일 위치 확인
+[2026-06-25 14:06:15] [TODO] caplog로 완료 로그에 eventId 포함 여부 검증하는 테스트 작성
+[2026-06-25 14:06:15] [TODO] caplog로 완료 로그에 riskLevel 포함 여부 검증하는 테스트 작성
+[2026-06-25 14:06:15] [TODO] caplog로 완료 로그에 clusterId 포함 여부 검증하는 테스트 작성
+[2026-06-25 14:06:15] [TODO] uv run pytest -q 실행하여 전체 테스트 green 확인
+[2026-06-25 14:19:29] [TODO] clusters.json에서 cluster id 3의 cluster_title 값 읽어 변수로 바인딩
+[2026-06-25 14:19:29] [TODO] clusters.json에서 cluster id 3의 description 값 읽어 변수로 바인딩
+[2026-06-25 14:19:29] [TODO] clusters.json에서 cluster id 99의 cluster_title 값 읽어 변수로 바인딩
+[2026-06-25 14:19:29] [TODO] clusters.json에서 cluster id 99의 description 값 읽어 변수로 바인딩
+[2026-06-25 14:19:29] [TODO] test_cluster_result_includes_title_and_description_from_real_metadata: 하드코딩 cluster_title 단언을 JSON 조회 값으로 교체
+[2026-06-25 14:19:29] [TODO] test_cluster_result_includes_title_and_description_from_real_metadata: description 단언을 JSON 조회 값(len>0)으로 유지 검증
+[2026-06-25 14:19:29] [TODO] test_misc_cluster_result_includes_title_and_description: 하드코딩 cluster_title 단언을 JSON 조회 값으로 교체
+[2026-06-25 14:19:29] [TODO] test_misc_cluster_result_includes_title_and_description: description 단언을 JSON 조회 값(len>0)으로 유지 검증
+[2026-06-25 14:19:29] [TODO] 두 테스트에서 매핑 계약(cluster_id/matched) 단언은 변경 없이 유지 확인
+[2026-06-25 14:19:29] [TODO] uv run pytest -q 실행하여 전체 테스트 green 검증
+[2026-06-25 14:25:00] [TODO] graph.py map_node 정상 분기의 event_id 처리 로직 현재 상태 확인
+[2026-06-25 14:25:01] [TODO] graph.py map_node 정상 분기에서 event_id=None 덮어쓰기를 실제 event_id 반환으로 변경
+[2026-06-25 14:25:02] [TODO] graph.py map_node 정상 분기에서 riskLevel/clusterId는 None 유지 확인
+[2026-06-25 14:25:03] [TODO] schemas/analysis.py의 event_id 필드 주석 현재 내용 확인
+[2026-06-25 14:25:04] [TODO] schemas/analysis.py event_id 필드 주석을 "정상 시 실제 id 반환, 미매칭 시 null"로 정정
+[2026-06-25 14:25:05] [TODO] tests/test_analyze.py의 test_analyze_normal_path 현재 단언 확인
+[2026-06-25 14:25:06] [TODO] tests/test_analyze.py test_analyze_normal_path의 eventId null 단언을 매칭된 실제 id 단언으로 변경
+[2026-06-25 14:25:07] [TODO] tests/test_analyze.py 미매칭 경로 테스트의 eventId null 단언은 변경 없이 유지 확인
+[2026-06-25 14:25:08] [TODO] .docs/API.md에서 "정상이면 eventId null" 기재를 실제 정책에 맞게 정정
+[2026-06-25 14:25:09] [TODO] .docs/DECISIONS_2026-06-24.md에 eventId 정책 정정 이력 항목 추가
+[2026-06-25 14:25:10] [TODO] uv run pytest -q 실행하여 전체 테스트 green 검증
