@@ -62,5 +62,9 @@ uv run pytest -q
 
 ## 후속 참고
 
-- GPT-5는 추론 토큰을 별도로 소비한다. 현재 `llm_max_tokens=2048`로 운영 중이며, 출력이 잘리면 상향을 검토한다.
+- GPT-5는 추론(reasoning) 토큰을 `max_completion_tokens` 예산에서 먼저 소비한다. 2048에서는 구조화 출력이 잘려
+  `finish_reason=length` → 구조화 파싱 실패(`LLMError "LLM 호출 또는 구조화 출력 실패"`)가 발생했다.
+  이를 해소하기 위해 **`llm_max_tokens` 2048 → 8192로 상향**했다. (상한일 뿐이라 실제 비용은 생성 토큰만큼만 발생)
+- 추가 최적화 여지: 이 LLM은 결정적 툴 산출값을 글로 옮기는 작업이라 무거운 추론이 불필요하므로,
+  `reasoning_effort="low"` 적용 시 추론 토큰·지연·비용을 더 줄일 수 있다(미적용, 후속 검토).
 - `CHOK_AI_LLM_MODEL` 환경변수로 모델을 override할 수 있다.
