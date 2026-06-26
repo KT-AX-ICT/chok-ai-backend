@@ -36,7 +36,9 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-5-2025-08-07"
     # GPT-5 계열은 temperature 기본값(1)만 허용 — 다른 값 전달 시 API 에러.
     llm_temperature: float = 1.0
-    llm_max_tokens: int = 2048  # 상세 analysis + 단계별 action 출력을 담기 위해 1024 → 2048 상향
+    # GPT-5는 추론(reasoning) 토큰을 이 예산에서 먼저 소비하므로, 구조화 출력이 잘리지 않도록
+    # 넉넉히 상향(2048 → 8192). 부족하면 finish_reason=length로 구조화 파싱이 실패한다.
+    llm_max_tokens: int = 8192
 
     # ── 배치 처리 · 회복탄력성 ──────────────────
     batch_concurrency: int = 8          # 전역 asyncio.Semaphore 상한 (동시 LLM 호출 캡)
