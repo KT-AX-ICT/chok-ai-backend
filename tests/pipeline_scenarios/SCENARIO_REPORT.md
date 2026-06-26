@@ -1,6 +1,6 @@
 # Tool①→②→③→④ 전체 파이프라인 시나리오 검증 리포트
 
-- 생성: 2026-06-25
+- 생성: 2026-06-26
 - 진입 조건: FATAL 레벨 event_id 한정
 - 파이프라인: `extract_event_template` → `classify_anomaly` → `assign_cluster` → `get_node_info`
 - 라우팅 기준: `is_anomaly=False` → LLM  /  `is_anomaly=True` → Tool③ 진행

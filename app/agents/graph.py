@@ -5,7 +5,7 @@ LLM이 tool-calling 메커니즘(AIMessage.tool_calls → 툴 실행 → ToolMes
 어떤 툴을 호출할지 결정하지만, 어떤 툴이 도느냐는 결정적이다.
 
 핵심 장치 3가지:
-(1) 내부 context tag("BGL 로그 데이터")를 그래프 초기 state에 주입 → tag가 있으면 툴 호출이 강제됨.
+(1) 내부 context tag("BGL")를 그래프 초기 state에 주입 → tag가 있으면 툴 호출이 강제됨.
 (2) tool_choice 단계별 강제로 LLM이 필수 툴을 못 빠뜨리게 함.
 (3) 사후 가드레일로 필수 툴 실행 여부를 검증하고 누락 시 결정적으로 보강 → AnalyzeResult 계약 보장.
 
@@ -62,7 +62,7 @@ _URGENCY_KO: dict[Urgency, RiskLevel] = {
 _MAX_TOOLS_DONE = 6
 
 # BGL 컨텍스트 태그 (tool 강제 트리거)
-_BGL_TAG = "BGL 로그 데이터"
+_BGL_TAG = "BGL"
 
 
 # ──────────────────────────────────────────────
@@ -74,7 +74,7 @@ class AgentState(TypedDict, total=False):
     log: Any  # AnalyzeRequest (TypedDict은 Pydantic 모델을 직접 타입 힌트 못함)
     # Agentic tool-calling 추가 필드
     messages: Annotated[list, add_messages]  # LangGraph 메시지 누적
-    tag: str                                  # "BGL 로그 데이터" 등 컨텍스트 태그
+    tag: str                                  # "BGL" 등 컨텍스트 태그
     tools_done: list[str]                     # 실행 완료된 툴 이름 목록
     # ① 산출
     event_id: str
@@ -224,7 +224,7 @@ def agent_node(state: AgentState) -> dict:
     - boost 단계:   cluster + node_info를 병렬 tool_calls로 요청한다(tool_choice="required").
     - None(완료):   tool_calls 없는 AIMessage를 반환해 루프를 종료한다.
 
-    tag가 'BGL 로그 데이터'일 때만 툴을 강제한다.
+    tag가 'BGL'일 때만 툴을 강제한다.
     무한루프 방지를 위해 tools_done 길이가 _MAX_TOOLS_DONE 이상이면 강제 완료한다.
     """
     tools_done = state.get("tools_done") or []
