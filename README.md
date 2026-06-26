@@ -234,11 +234,9 @@ P0 범위:
 - LangGraph Studio(`langgraph dev`) 지원 — 입력 정규화 노드로 JSON 직접 실행
 - 콘솔+파일 로깅(`logs/app.log`, 로테이션) 및 분석 완료 시 응답 판정값 로깅
 - 분석 흐름 테스트 (analyze·batch·에러 매핑)
-
-진행 중 / 남은 작업:
-
 - 실 데이터 기반 Tool 파라미터·프롬프트 튜닝 및 시나리오 검증 보강
 - Spring batch 연동 end-to-end 안정화
+
 
 엔드포인트·분기·도구별 시험 항목 전체는 [`TEST_CASES.csv`](TEST_CASES.csv) 참고.
 
