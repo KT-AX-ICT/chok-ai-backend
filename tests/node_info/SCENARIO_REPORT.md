@@ -1,6 +1,6 @@
 # Node 정보 조회 Tool — 시나리오 검증 리포트
 
-- 생성: 2026-06-25
+- 생성: 2026-06-26
 - 대상 함수: `get_node_info(node_id)`
 - 판정 기준: node_id 파싱 계층(rack/midplane/node_slot/node_role) + alert_pct 조회 경로
 

@@ -52,7 +52,7 @@ async def analyze_single_log(
     LangGraph StateGraph를 ainvoke하여 Tool①②③④ + LLM + 결과매핑을 실행한다.
     """
     logger.info("단건 분석 시작 — log_id=%s", log.log_id)
-    initial_state = {"log": log, "tag": "BGL 로그 데이터", "messages": [], "tools_done": []}
+    initial_state = {"log": log, "tag": "BGL", "messages": [], "tools_done": []}
     final_state = await graph.ainvoke(initial_state)
 
     status: LogStatus = final_state["status"]

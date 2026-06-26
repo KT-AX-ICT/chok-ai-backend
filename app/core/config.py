@@ -33,8 +33,9 @@ class Settings(BaseSettings):
         validation_alias="OPENAI_API_KEY",
     )
     # 모델은 CHOK_AI_LLM_MODEL 로 override 가능
-    llm_model: str = "gpt-4o-mini"
-    llm_temperature: float = 0.2
+    llm_model: str = "gpt-5-2025-08-07"
+    # GPT-5 계열은 temperature 기본값(1)만 허용 — 다른 값 전달 시 API 에러.
+    llm_temperature: float = 1.0
     llm_max_tokens: int = 2048  # 상세 analysis + 단계별 action 출력을 담기 위해 1024 → 2048 상향
 
     # ── 배치 처리 · 회복탄력성 ──────────────────

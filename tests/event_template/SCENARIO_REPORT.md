@@ -1,6 +1,6 @@
 # 이벤트 템플릿 추출 Tool — 시나리오 검증 리포트
 
-- 생성: 2026-06-25
+- 생성: 2026-06-26
 - 대상 함수: `extract_event_template(content)`
 - tie-break 규칙: **literal_len 내림차순 → wildcard_count 오름차순 → event_id 오름차순**
 

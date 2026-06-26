@@ -433,7 +433,7 @@ def test_agentic_normal_tools_done(monkeypatch) -> None:
     state = asyncio.run(
         _graph.graph.ainvoke({
             "log": log,
-            "tag": "BGL 로그 데이터",
+            "tag": "BGL",
             "messages": [],
             "tools_done": [],
         })
@@ -488,7 +488,7 @@ def test_agentic_anomaly_tools_done(monkeypatch) -> None:
     state = asyncio.run(
         _graph.graph.ainvoke({
             "log": log,
-            "tag": "BGL 로그 데이터",
+            "tag": "BGL",
             "messages": [],
             "tools_done": [],
         })
@@ -890,7 +890,7 @@ def test_ingest_node_normalizes_dict() -> None:
 
     state = {
         "log": log_dict,
-        "tag": "BGL 로그 데이터",
+        "tag": "BGL",
         "tools_done": [],
     }
 
@@ -921,7 +921,7 @@ def test_ingest_node_passthrough_object() -> None:
 
     state = {
         "log": log_obj,
-        "tag": "BGL 로그 데이터",
+        "tag": "BGL",
         "tools_done": [],
     }
 
@@ -931,7 +931,7 @@ def test_ingest_node_passthrough_object() -> None:
 
 
 def test_ingest_node_defaults_tag() -> None:
-    """tag 미지정 시 updates['tag'] == 'BGL 로그 데이터' 기본값이 보강된다."""
+    """tag 미지정 시 updates['tag'] == 'BGL' 기본값이 보강된다."""
     import app.agents.graph as _graph
     from app.schemas.analysis import AnalyzeRequest
 
@@ -956,7 +956,7 @@ def test_ingest_node_defaults_tag() -> None:
 
     updates = _graph.ingest_node(state)
 
-    assert updates.get("tag") == "BGL 로그 데이터", (
+    assert updates.get("tag") == "BGL", (
         f"tag 기본값이 보강되어야 한다. 실제: {updates.get('tag')!r}"
     )
 
